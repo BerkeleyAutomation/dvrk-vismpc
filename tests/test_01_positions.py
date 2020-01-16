@@ -10,7 +10,7 @@ example) then it's likely that either something's broken, or that the arm is
 simply near or at the limit of its 'workspace.' For the latter, simply rotate
 the arm back to more of a 'central' state, if that makes sense.
 
-NOTE: might as well use this for calibration.
+We're using this for calibration! To test, run the test_03 script we have.
 """
 import sys
 sys.path.append('..')
@@ -32,7 +32,7 @@ def _calibrate(p):
 
 
 if __name__ == "__main__":
-    p = dvrkArm('/PSM2')
+    p = dvrkArm('/PSM1')
     _calibrate(p)
     sys.exit()
 
@@ -60,4 +60,3 @@ if __name__ == "__main__":
     p.set_pose_linear(org_pos, org_rot, 'deg')
     time.sleep(2)
     print('after moving, pose (deg): {}'.format(p.get_current_pose(unit='deg')))
-

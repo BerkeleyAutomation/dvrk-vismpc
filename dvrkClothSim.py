@@ -14,7 +14,7 @@ class dvrkClothSim(threading.Thread):
         threading.Thread.__init__(self)
         self.__ros_namespace = ros_namespace
         self.interval_ms = interval_ms
-        self.arm = dvrkArm('/PSM2')
+        self.arm = dvrkArm('/PSM1')
         self.t = 0.0
         self.nStart = 0.0
         self.nEnd = 0.0
@@ -33,6 +33,8 @@ class dvrkClothSim(threading.Thread):
 
     """
     Motion Creating function for cloth simulation
+    Daniel: AH! Set position origin is NOT like moving the origin of a frame,
+    but simply means a 'home' position.
     """
     def set_position_origin(self, pos, rot, unit='rad'):
         self.rot_org[0] = rot

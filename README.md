@@ -47,20 +47,24 @@ load_net.py`. See `call_network/README.md` for detailed instructions.  This
 script runs continuously in the background and checks for any new images in the
 target directory.
 
-3. Check the configuration file in `config.py` which will contain a bunch of
+3. In another tab, *activate the Python 3 virtualenv above*, and run `python
+ZividCapture.py`. This script runs continuously and will activate with a
+keyboard command.
+
+4. Check the configuration file in `config.py` which will contain a bunch of
 settings we can adjust. *In particular, adjust which calibration data we should
 be using*. They are in the form of text files.
 
-4. Finally, *in that same Python3 virtualenv*, run `python run.py` for
+5. Finally, *in that same Python3 virtualenv*, run `python run.py` for
 experiments, using the system Python. This requires some keyboard strokes. *The
 code runs one episode* and then terminates.  Repeat for more episodes.
-
-**TODO: WILL THE CAMERA LOGIC WORK?**
 
 ## Tips
 
 - To test the camera code, just run `python ZividCapture.py` and adjust the
-  main method. Must be in the Python3 virtualenv.
+  main method. Must be in the Python3 virtualenv. The run script will do some
+  similar image processing, but it should not be an issue if it's in Python2, I
+  don't think image processing code changed that much.
 
 - For quick testing of the da vinci with resorting to the machinery of the
   experimental pipeline, use `python dvrkClothSim.py` (for generic motion) or
