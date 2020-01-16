@@ -2,6 +2,8 @@
 
 This is used for surgical robotics and any Python2 code. DO NOT MERGE WITH
 load_config in the neural net code.
+
+Do not use the camera code here because now the camera uses python3.
 """
 import os
 import cv2
@@ -22,18 +24,6 @@ RED   = (0,0,255)
 # ---------------------------------------------------------------------------- #
 DVRK_IMG_PATH = 'dir_for_imgs/'
 
-
-# ---------------------------------------------------------------------------- #
-# Camera configuration, keep separate from internal `camera.py` testing.
-# Tune cutoff carefully, it's in meters.
-# A maxval of 0.910 will black out background plane, or make it white if we want
-# :-). Using 1.000 will make background look slightly brighter
-# ---------------------------------------------------------------------------- #
-CUTOFF_MIN = 0.790
-CUTOFF_MAX = 0.895
-IN_PAINT = True
-
-
 # ---------------------------------------------------------------------------- #
 # CALIBRATION FILE
 # ---------------------------------------------------------------------------- #
@@ -47,4 +37,3 @@ DATA_SQUARE = U.load_mapping_table(row_board=ROW_BOARD,
                                    column_board=COL_BOARD,
                                    file_name=CALIB_FILE,
                                    cloth_height=CLOTH_HEIGHT)
-

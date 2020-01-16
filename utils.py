@@ -23,6 +23,14 @@ def deg_to_rad(deg):
     return np.array(deg) * np.pi/180.
 
 
+def debug_print_img(img):
+    print('  max: {:.3f}'.format(np.max(img)))
+    print('  min: {:.3f}'.format(np.min(img)))
+    print('  mean: {:.3f}'.format(np.mean(img)))
+    print('  medi: {:.3f}'.format(np.median(img)))
+    print('  std: {:.3f}'.format(np.std(img)))
+
+
 def normalize(v):
     norm=np.linalg.norm(v, ord=2)
     if norm==0:
@@ -66,47 +74,76 @@ def call_wait_key(nothing=None, force_exit=False):
     return False
 
 
-def process_img_for_net(img, ix=0, iy=0):
-    """Do any sort of processing of the image for the neural network.
+def crop_then_resize(img, ix, iy, offset, final_x, final_y, skip_crop=False):
+    """Crop and THEN resize the image for the neural network.
 
-    Only does cropping and re-sizing, for now.
-
-    For example, we definitely need to crop, and we may want to do some
-    filtering or blurring to smoothen the texture. Our network uses images of
-    size (100,100) but as long as we process it and then make sure it has the
-    same height and width it'll be fine -- the net class has a resize command as
-    a backup.
-
-    Processing should be done before the cropping, because doing filtering after
-    cropping results in very blurry images (the filters cover a wider range).
+    Experiment with processing before or after. I think processing, then
+    filtering, may result in blurrier images than if we did filtering, then
+    processing. But I think we did the latter for the ICRA 2020 submission.
 
     First component 'height', second component 'width'.  Decrease 'height'
     values to get images higher up, decrease 'width' to make it move left.
 
-    IF CHANGING THESE, CHECK THAT INPAINTING IS CONSISTENT. I do this with
-    inpaint_x and inpaint_y, or ix and iy.
+    We skip because sometimes we may already have a correct-sized image.
     """
-    img = img[135-ix:635-ix, 580-iy:1080-iy]
+    if not skip_crop:
+        img = img[ix:ix+offset, iy:iy+offset]
     assert img.shape[0] == img.shape[1]
-    img = cv2.resize(img, (100, 100))
+    img = cv2.resize(img, (final_x, final_y))
     return img
 
 
-def inpaint_depth_image(d_img, ix=0, iy=0):
+def depth_to_3ch(d_img, cutoff_min, cutoff_max):
+    """Process depth images like in the ISRR 2019 paper, second step."""
+    w,h = d_img.shape
+    n_img = np.zeros([w, h, 3])
+    d_img = d_img.flatten()
+
+    # Instead of this:
+    #d_img[d_img>cutoff] = 0.0
+    # Do this? The cutoff_max means beyond the cutoff, pixels become white.
+    #d_img[ d_img>cutoff_max ] = 0.0
+    d_img[ d_img>cutoff_max ] = cutoff_max
+    d_img[ d_img<cutoff_min ] = cutoff_min
+    print('max/min depth after cutoff: {:.3f} {:.3f}'.format(np.max(d_img), np.min(d_img)))
+
+    d_img = d_img.reshape([w,h])
+    for i in range(3):
+        n_img[:, :, i] = d_img
+    return n_img
+
+
+def depth_3ch_to_255(d_img):
+    """Process depth images like in the ISRR 2019 paper, second step."""
+    # Instead of this:
+    #d_img = 255.0/np.max(d_img)*d_img
+    # Do this:
+    d_img = d_img * (255.0 / (np.max(d_img)-np.min(d_img)) )  # pixels within a 255-interval
+    d_img = d_img - np.min(d_img)                             # pixels actually in [0,255]
+
+    d_img = np.array(d_img, dtype=np.uint8)
+    for i in range(3):
+        d_img[:, :, i] = cv2.equalizeHist(d_img[:, :, i])
+    return d_img
+
+
+def inpaint_depth_image(d_img, ix, iy, offset):
     """Inpaint depth image on raw depth values.
 
     Only import code here to avoid making them required if we're not inpainting.
 
-    Also, inpainting is slow, so crop some irrelevant values. But BE CAREFUL!
-    Make sure any cropping here will lead to logical consistency with the
-    processing in `camera.process_img_for_net` later. For now we crop the 'later
-    part' of each dimension, which still leads to > 2x speed-up. The
-    window size is 3 which I think means we can get away with a pixel difference
-    of 3 when cropping but to be safe let's add a bit more, 50 pix to each side.
+    (1) Applying inpainting on a cropped area of the real depth image, to avoid
+    noise from area outside the fabric. DO NOT RESIZE THE DEPTH IMAGE (via
+    cv2.imresize) THEN INPAINT. That changes the resolution of the depth image.
 
-    For `ix` and `iy` see `camera.process_img_for_net`, makes inpainting faster.
+    (2) We also need to ensure we are consistent in cropping for later code. I
+    think it makes sense to use the same cropping code.
+
+    (3) The window size is 3 which I think means we can get away with a pixel
+    difference of 3 when cropping but to be safe let's add a bit more, 50 pix
+    to each side.
     """
-    d_img = d_img[ix:685,iy:1130]
+    d_img = d_img[ix:ix+offset, iy:iy+offset]
     from perception import (ColorImage, DepthImage)
     print('now in-painting the depth image (shape {}), ix, iy = {}, {}...'.format(
             d_img.shape, ix, iy))
@@ -115,7 +152,8 @@ def inpaint_depth_image(d_img, ix=0, iy=0):
     d_img = d_img.inpaint()     # inpaint, then get d_img right away
     d_img = d_img.data          # get raw data back from the class
     cum_t = time.time() - start_t
-    print('finished in-painting in {:.2f} seconds'.format(cum_t))
+    print('finished in-painting in {:.2f} seconds, result is {}-sized img'.format(
+            cum_t, d_img.shape))
     return d_img
 
 

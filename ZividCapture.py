@@ -14,6 +14,34 @@ import sys
 from os.path import join
 import utils as U
 
+# ---------------------------------------------------------------------------- #
+# Camera configuration, keep separate from internal `camera.py` testing.
+# Tune cutoff carefully, it's in meters.
+# ---------------------------------------------------------------------------- #
+# Minho's new camera code returns depth in millimeters.
+# ---------------------------------------------------------------------------- #
+_CUTOFF_MIN = 780.0
+_CUTOFF_MAX = 895.0
+
+# Careful, make sure cropping and inpainting are consistent.
+_IN_PAINT = True
+
+# Last tuned: January 16, 2020. These are tuned for a specific camera
+# configuration and a location of the fabric plane.
+_IX = 365
+_IY = 840
+
+# The 'offset' is the size, in ORIGINAL pixels, that the image should span.
+# Generally 480-500 works well.  We'd call a resize on this area AFTER we crop.
+_OFFSET = 485
+
+# Pretty simple, whatever the size of the actual image input to the neural net.
+_FINAL_X = 56
+_FINAL_Y = _FINAL_X
+# ---------------------------------------------------------------------------- #
+# End of camera configuration values.
+# ---------------------------------------------------------------------------- #
+
 
 class ZividCapture():
 
@@ -80,7 +108,7 @@ class ZividCapture():
             self.image = self.image.astype(np.uint8)
             self.depth = np.asarray([np_array["z"]])    # unit = (mm)
             self.depth = np.moveaxis(self.depth, [0, 1, 2], [2, 0, 1])
-            return self.image, self.depth
+            return self.image, np.squeeze(self.depth)
 
 
 def continuously_view_2d():
@@ -98,16 +126,10 @@ def daniel_test(zc):
     i = 0
     nb_images = 1
 
-    # For real physical robot experiments, use these values in `config.py`.
-    CUTOFF_MIN = 0.800
-    CUTOFF_MAX = 0.905
-    IN_PAINT = True
-
     while i < nb_images:
         print(os.listdir(HEAD))
         num = len([x for x in os.listdir(HEAD) if 'c_img_crop' in x])
         print('current index is at: {}'.format(num))
-
         d_img = None
         c_img = None
         while c_img is None or d_img is None:
@@ -126,43 +148,59 @@ def daniel_test(zc):
         # We fill in NaNs with zeros.
         c_img[np.isnan(c_img)] = 0
         d_img[np.isnan(d_img)] = 0
-
-        # Images are 1200 x 1920, with 3 channels (well, we force for depth).
-        assert d_img.shape == (1200, 1920, 1), d_img.shape
+        print('\nAfter NaN filtering of the depth images:')
+        U.debug_print_img(d_img)
+        assert d_img.shape == (1200, 1920), d_img.shape
         assert c_img.shape == (1200, 1920, 3), c_img.shape
 
-        print(c_img.shape)
-        print(d_img.shape)
-        cv2.imwrite(join(HEAD,'c_img.png'), c_img)
-        cv2.imwrite(join(HEAD,'d_img.png'), d_img)
+        # We can `inpaint` which fills in the zero pixels. WILL RESIZE IMAGE.
+        if _IN_PAINT:
+            d_img = U.inpaint_depth_image(d_img, ix=_IX, iy=_IY, offset=_OFFSET)
+            d_img_crop = U.crop_then_resize(d_img, _IX, _IY, _OFFSET, _FINAL_X, _FINAL_Y,
+                                            skip_crop=True)
+        else:
+            d_img_crop = U.crop_then_resize(d_img, _IX, _IY, _OFFSET, _FINAL_X, _FINAL_Y,
+                                            skip_crop=False)
+        c_img_crop = U.crop_then_resize(c_img, _IX, _IY, _OFFSET, _FINAL_X, _FINAL_Y)
+        print('\nAfter NaN filtering of the depth images, now the RESIZED image:')
+        U.debug_print_img(d_img_crop)
 
-        ## # BUT we can call `inpaint` which will fill in the zero pixels!
-        ## # UPDATE: check if this works with Python3, but I think it does.
-        ## if IN_PAINT:
-        ##     d_img = U.inpaint_depth_image(d_img)
+        # Let's process depth. Note that we do the cropped vs noncropped
+        # separately, so the cropped one shouldn't have closer noisy values from
+        # the dvrk arm affecting its calculations.
+        d_img      = U.depth_to_3ch(d_img,      cutoff_min=_CUTOFF_MIN, cutoff_max=_CUTOFF_MAX)
+        d_img_crop = U.depth_to_3ch(d_img_crop, cutoff_min=_CUTOFF_MIN, cutoff_max=_CUTOFF_MAX)
+        d_img      = U.depth_3ch_to_255(d_img)
+        d_img_crop = U.depth_3ch_to_255(d_img_crop)
 
-        ## # Check depth image. Also, we have to tune the cutoff.
-        ## # The depth is clearly in METERS, but I think it's hard to get an
-        ## # accurate cutoff, sadly.
-        ## print('\nAfter NaN filtering of the depth images ...')
-        ## print('  max: {:.3f}'.format(np.max(d_img)))
-        ## print('  min: {:.3f}'.format(np.min(d_img)))
-        ## print('  mean: {:.3f}'.format(np.mean(d_img)))
-        ## print('  medi: {:.3f}'.format(np.median(d_img)))
-        ## print('  std: {:.3f}'.format(np.std(d_img)))
+        # Try blurring depth, bilateral recommends 9 for offline applications
+        # that need heavy blurring. The two sigmas were 75 by default.
+        d_img_crop_blur = cv2.bilateralFilter(d_img_crop, 9, 100, 100)
+        #d_img_crop_blur = cv2.medianBlur(d_img_crop_blur, 5)
 
-        # I think we need a version with and without the cropped for depth.
-        d_img_crop = U.process_img_for_net(d_img)
-        print('\nAfter NaN filtering of the depth images ... now for the CROPPED image:')
-        print('  max: {:.3f}'.format(np.max(d_img_crop)))
-        print('  min: {:.3f}'.format(np.min(d_img_crop)))
-        print('  mean: {:.3f}'.format(np.mean(d_img_crop)))
-        print('  medi: {:.3f}'.format(np.median(d_img_crop)))
-        print('  std: {:.3f}'.format(np.std(d_img_crop)))
-        print('')
+        c_tail           = "{}_c_img.png".format(str(num).zfill(2))
+        d_tail           = "{}_d_img.png".format(str(num).zfill(2))
+        c_tail_crop      = "{}_c_img_crop.png".format(str(num).zfill(2))
+        d_tail_crop      = "{}_d_img_crop.png".format(str(num).zfill(2))
+        d_tail_crop_blur = "{}_d_img_crop_blur.png".format(str(num).zfill(2))
 
+        c_img_path           = join(HEAD, c_tail)
+        d_img_path           = join(HEAD, d_tail)
+        c_img_path_crop      = join(HEAD, c_tail_crop)
+        d_img_path_crop      = join(HEAD, d_tail_crop)
+        d_img_path_crop_blur = join(HEAD, d_tail_crop_blur)
 
+        cv2.imwrite(c_img_path,           c_img)
+        cv2.imwrite(d_img_path,           d_img)
+        cv2.imwrite(c_img_path_crop,      c_img_crop)
+        cv2.imwrite(d_img_path_crop,      d_img_crop)
+        cv2.imwrite(d_img_path_crop_blur, d_img_crop_blur)
 
+        print('\n  just saved: {}'.format(c_img_path))
+        print('  just saved: {}'.format(d_img_path))
+        print('  just saved: {}'.format(c_img_path_crop))
+        print('  just saved: {}'.format(d_img_path_crop))
+        print('  just saved: {}'.format(d_img_path_crop_blur))
         i += 1
 
 
