@@ -32,7 +32,7 @@ def normalize(v):
 
 def save_image_numbers(head, img, indicator=None, debug=False):
     """Save image in a directory, but numbered at the end.
-    
+
     Example, indicator might be `c_img`. Note: if we import os.path like `from
     os import path`, then please avoid name conflicts!
     """
@@ -44,7 +44,7 @@ def save_image_numbers(head, img, indicator=None, debug=False):
         new_path = join(head, '{}_{}.png'.format(indicator, str(nb).zfill(4)))
     if debug:
         print('saving to: {}'.format(new_path))
-    cv2.imwrite(new_path, img) 
+    cv2.imwrite(new_path, img)
 
 
 def get_date():
@@ -64,6 +64,32 @@ def call_wait_key(nothing=None, force_exit=False):
         else:
             return True
     return False
+
+
+def process_img_for_net(img, ix=0, iy=0):
+    """Do any sort of processing of the image for the neural network.
+
+    Only does cropping and re-sizing, for now.
+
+    For example, we definitely need to crop, and we may want to do some
+    filtering or blurring to smoothen the texture. Our network uses images of
+    size (100,100) but as long as we process it and then make sure it has the
+    same height and width it'll be fine -- the net class has a resize command as
+    a backup.
+
+    Processing should be done before the cropping, because doing filtering after
+    cropping results in very blurry images (the filters cover a wider range).
+
+    First component 'height', second component 'width'.  Decrease 'height'
+    values to get images higher up, decrease 'width' to make it move left.
+
+    IF CHANGING THESE, CHECK THAT INPAINTING IS CONSISTENT. I do this with
+    inpaint_x and inpaint_y, or ix and iy.
+    """
+    img = img[135-ix:635-ix, 580-iy:1080-iy]
+    assert img.shape[0] == img.shape[1]
+    img = cv2.resize(img, (100, 100))
+    return img
 
 
 def inpaint_depth_image(d_img, ix=0, iy=0):
@@ -236,11 +262,11 @@ def move_p_from_net_output(x, y, dx, dy, row_board, col_board, data_square, p,
     that ... when we apply the action, dx and dy independently 'adjust' x and y.
     So it is indeed (x+dx) and (y+dy). To convert this to our case, it should be
     as simple as doubling the dx and dy values.
-    
+
     It's a bit trick to understand by reading gym-cloth code, because I first
     convert dx and dy into other values, and then I repeatdly do motions until
     the full length is achieved.
-    
+
     :params (x, y, dx, dy): outputs from the neural network, all in [-1,1].
     :param row_board: number of rows.
     :param col_board: number of columns.
@@ -331,7 +357,7 @@ if __name__ == "__main__":
     _ = print_means(images_d)
     print('color across all data in directory:')
     _ = print_means(images)
-   
+
     # Inspect coverage.
     nb_imgs = len(img_paths)
     print('num images: {}'.format(nb_imgs))
@@ -359,7 +385,7 @@ if __name__ == "__main__":
             img = np.uint8(img)
             print('after correcting:')
             single_means(img, depth=True)
-            
+
             savepath = fname.replace('tmp','tmp2')
             print('saving to: {}\n'.format(savepath))
             cv2.imwrite(savepath, img)
@@ -380,7 +406,7 @@ if __name__ == "__main__":
             img = np.uint8(img)
             print('after correcting:')
             single_means(img, depth=False)
-            
+
             savepath = fname.replace('tmp','tmp2')
             print('saving to: {}\n'.format(savepath))
             cv2.imwrite(savepath, img)
@@ -394,7 +420,7 @@ if __name__ == "__main__":
             img = _adjust_gamma(img, gamma=1.5)
             print('after correcting:')
             single_means(img, depth=False)
-            
+
             savepath = fname.replace('tmp','tmp2')
             print('saving to: {}\n'.format(savepath))
             cv2.imwrite(savepath, img)
@@ -415,4 +441,3 @@ if __name__ == "__main__":
             savepath = fname.replace('tmp','tmp2')
             print('saving to: {}\n'.format(savepath))
             cv2.imwrite(savepath, img)
-

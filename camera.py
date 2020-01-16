@@ -128,33 +128,7 @@ def depth_3ch_to_255(d_img):
     d_img = np.array(d_img, dtype=np.uint8)
     for i in range(3):
         d_img[:, :, i] = cv2.equalizeHist(d_img[:, :, i])
-    return d_img    
-
-
-def process_img_for_net(img, ix=0, iy=0):
-    """Do any sort of processing of the image for the neural network.
-
-    Only does cropping and re-sizing, for now.
-
-    For example, we definitely need to crop, and we may want to do some
-    filtering or blurring to smoothen the texture. Our network uses images of
-    size (100,100) but as long as we process it and then make sure it has the
-    same height and width it'll be fine -- the net class has a resize command as
-    a backup.
-
-    Processing should be done before the cropping, because doing filtering after
-    cropping results in very blurry images (the filters cover a wider range).
-    """
-    # First component 'height', second component 'width'.  Decrease 'height'
-    # values to get images higher up, decrease 'width' to make it move left.
-
-    # IF CHANGING THESE, CHECK THAT INPAINTING IS CONSISTENT. I do this with
-    # inpaint_x and inpaint_y, or ix and iy.
-    img = img[135-ix:635-ix, 580-iy:1080-iy]
-    assert img.shape[0] == img.shape[1]
-
-    img = cv2.resize(img, (100, 100))
-    return img
+    return d_img
 
 
 if __name__=='__main__':
@@ -175,14 +149,14 @@ if __name__=='__main__':
 
         d_img = None
         c_img = None
-    
+
         print('querying the depth ...')
         while d_img is None:
             d_img = rgbd.read_depth_data()
         print('querying the RGB ...')
         while c_img is None:
             c_img = rgbd.read_color_data()
-        
+
         # Check for NaNs.
         nb_items = np.prod(np.shape(c_img))
         nb_not_nan = np.count_nonzero(~np.isnan(c_img))
@@ -216,7 +190,7 @@ if __name__=='__main__':
         print('  std: {:.3f}'.format(np.std(d_img)))
 
         # I think we need a version with and without the cropped for depth.
-        d_img_crop = process_img_for_net(d_img)
+        d_img_crop = U.process_img_for_net(d_img)
         print('\nAfter NaN filtering of the depth images ... now for the CROPPED image:')
         print('  max: {:.3f}'.format(np.max(d_img_crop)))
         print('  min: {:.3f}'.format(np.min(d_img_crop)))
@@ -233,7 +207,7 @@ if __name__=='__main__':
         d_img      = depth_3ch_to_255(d_img)
         d_img_crop = depth_3ch_to_255(d_img_crop)
 
-        c_img_crop = process_img_for_net(c_img)
+        c_img_crop = U.process_img_for_net(c_img)
         assert c_img_crop.shape[0] == c_img_crop.shape[1], c_img.shape
 
         # Try blurring depth, bilateral recommends 9 for offline applications
@@ -265,5 +239,5 @@ if __name__=='__main__':
         print('  just saved: {}'.format(d_img_path_crop))
         print('  just saved: {}'.format(d_img_path_crop_blur))
         i += 1
-    
+
     #rospy.spin()

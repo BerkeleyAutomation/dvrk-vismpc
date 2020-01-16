@@ -1,55 +1,70 @@
-# Da Vinci Code
+# Da Vinci Code for Fabrics and Visual MPC
 
-Requires Python 2.7 and using our davinci-arm machine (formerly named davinci0).
+This is not for the original smoothing paper. For that, [see this code][1].
 
 Use the following core API:
 
 - `dvrkArm.py`: an API wrapping around the ROS messages to get or set positions.
 - `dvrkClothSim.py` for moving the arms.
 
+
+## Installation and Setup
+
+We're using davinci-arm machine (formerly named davinci0).
+
+We use a mix of the system Python 2.7 on there, and a Python 3.5 virtual env.
+Unlike in the original smoothing paper (from fall 2019) the camera code has
+been updated to use Python 3. However, the neural network code (as before)
+still requires Python 3.
+
+To install, first clone this repository. Then make a new Python 3.5 virtualenv
+from a reference virtualenv on davinci0:
+
+```
+source ~/venv/bin/activate
+```
+
+I did `pip freeze` and put this in a file, and then made a new Python3 virtualenv:
+
+```
+virtualenv venvs/py3-vismpc-dvrk  --python=python3
+```
+
+and then did `pip install -r [filename].txt` to get all the packages updated.
+After that, running `import zivid` should work, and then we later install
+Tensorflow and other neural network code in that virtualenv.
+
 ## Experimental Usage
 
 Performing our experiments involves several steps, due to loading a separate
-neural network (using a Python3 virtualenv). Roughly, the steps are:
+neural network and having it run continuously. Roughly, the steps are:
 
 1. Activate the robot via `roscore`, then (in a separate tab) run `./teleop` in
-`~/catkin_ws` and click HOME.
+`~/catkin_ws` and click HOME. This gets the dvrk setup.
 
-2. In another tab in `~/catkin_ws/src/zivid-ros/zivid_samples/launch`, run the
-camera capture script:
-
-  ```
-  roslaunch zivid_samples sample_capture_py.launch 
-  ```
-
-  This will open up rviz, and generate some flashing lights.
-
-3. In yet another tab, *set up a new Python 3 virtualenv*, and run `python
+2. In another tab, *activate the Python 3 virtualenv above*, and run `python
 load_net.py`. See `call_network/README.md` for detailed instructions.  This
 script runs continuously in the background and checks for any new images in the
 target directory.
 
-4. Check the configuration file in `config.py` which will contain a bunch of
+3. Check the configuration file in `config.py` which will contain a bunch of
 settings we can adjust. *In particular, adjust which calibration data we should
 be using*. They are in the form of text files.
 
-5. Finally, run `python run.py` for experiments, using the system Python. This
-requires some keyboard strokes. *The code runs one episode* and then terminates.
-Repeat for more episodes.
+4. Finally, *in that same Python3 virtualenv*, run `python run.py` for
+experiments, using the system Python. This requires some keyboard strokes. *The
+code runs one episode* and then terminates.  Repeat for more episodes.
 
-Other helpful pointers:
+**TODO: WILL THE CAMERA LOGIC WORK?**
 
-- You can run `python camera.py`, *using the system Python on our machine*
-  (i.e., not a virtualenv). The main method shows how to periodically query and
-  save images from the camera into `.png` files.  We import this in code above.
+## Tips
+
+- To test the camera code, just run `python ZividCapture.py` and adjust the
+  main method. Must be in the Python3 virtualenv.
 
 - For quick testing of the da vinci with resorting to the machinery of the
   experimental pipeline, use `python dvrkClothSim.py` (for generic motion) or
   one of the test scripts in `tests/` (for calibration accuracy).
-
-- For calibration, we do this to can map from neural network coordinates to
-  actions. We use a grid of known points, and then apply bilinear interpolation
-  to approximate positions everywhere else.
 
 
 ## Quick Start
@@ -82,3 +97,5 @@ actions. For example, above we show how to set the pose of the arm given
 pre-computed `targ_pos` and `targ_rot`.
 
 
+
+[1]:https://github.com/BerkeleyAutomation/dvrk_python
