@@ -1,8 +1,6 @@
-**TODO UNDERSTAND MINHO'S NEW CODE**
-
 # Da Vinci Code
 
-Requires Python 2.7 and using our davinci0 machine.
+Requires Python 2.7 and using our davinci-arm machine (formerly named davinci0).
 
 Use the following core API:
 
