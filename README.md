@@ -60,16 +60,21 @@ the network loading folder.
 1. Activate the robot via `roscore`, then (in a separate tab) run `./teleop` in
 `~/catkin_ws` and click HOME. This gets the dvrk setup.
 
-2. In another tab, *activate the Python 3 virtualenv above*, and run `python
-load_net.py`. See `call_network/README.md` for detailed instructions.  This
-script runs continuously in the background and checks for any new images in the
-target directory.
+2. In another tab, *activate the Python 3 virtualenv above*, and run
+
+   ```
+   rm dir_for_imgs/*.png ; rm dir_for_imgs/result*.txt ; python call_network/load_net.py
+   ```
+   See `call_network/README.md` for detailed instructions.  This script runs
+   continuously in the background and checks for any new images in the target
+   directory. Removes images in the calibration directory.
 
 3. In another tab, *activate the Python 3 virtualenv above*, and run `python
 ZividCapture.py`. This script runs continuously and will activate with a
 keyboard command. Whenever we need a new set of images, we need to press enter
 at this TAB. Then that will take a picture, and save images indexed by a
-leading number. The neural net code will detect that number.
+leading number. The neural net code will detect that number and load a specific
+file w/that index.
 
 4. Finally, run `python run.py --tier X` for experiments, using the system
 Python. This requires some keyboard strokes. *The code runs one episode* and

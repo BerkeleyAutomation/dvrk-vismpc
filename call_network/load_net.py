@@ -10,6 +10,10 @@ that directory.
 
 The removal of the Python2.7 package is necessary due to ROS, see:
     https://stackoverflow.com/questions/43019951/
+
+BE CAREFUL ABOUT THE CODING LOGIC! It assumes that we can order the images in
+the target directory (cfg.DVRK_IMG_PATH) and that the LAST-INDEXED items are
+what we want! And that we can get the indices by splitting on a hyphen.
 """
 import os
 import sys
@@ -76,8 +80,9 @@ class NetLoader:
     def process(self, img, debug=False):
         """Process output from raw dvrk, real world image `img`.
         """
+        # Daniel: we shouldn't need to resize!
         #h ,w = self.observation_shape[0], self.observation_shape[1]
-        #img = cv2.resize(img, (h,w)) # Daniel: we shouldn't need to resize.
+        #img = cv2.resize(img, (h,w))
         return img
 
     def act_to_coords(self, img, act, annotate=False, img_file=None):
@@ -154,9 +159,26 @@ def run_test(net_l):
         print('{}    \t {} ---> {},     from {}'.format(result, ps, pe, img_file))
 
 
+def get_sorted_imgs():
+    res = sorted(
+        [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
+            if x[-4:]=='.png']
+    )
+    return res
+
+
+def get_net_results():
+    net_results = sorted(
+        [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
+            if 'result_' in x and '.txt' in x]
+    )
+    return net_results
+
+
 if __name__ == '__main__':
     net_file = cfg.NET_FILE
     net_l = NetLoader(net_file)
+    raw_img_shape = (56,56,3)
 
     # Test if it is working, should set to False for actual dvrk experiments.
     DO_TEST = False
@@ -165,13 +187,16 @@ if __name__ == '__main__':
         sys.exit()
 
     # For now assume a clean directory.
-    dvrk_img_paths = sorted(
-        [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
-            if x[-4:]=='.png']
-    )
+    dvrk_img_paths = get_sorted_imgs()
+    net_results = get_net_results()
     if len(dvrk_img_paths) > 0:
         print('There are {} images in {}. Please remove it/them.'.format(
                 len(dvrk_img_paths), cfg.DVRK_IMG_PATH))
+        print('It should be empty to start an episode.')
+        sys.exit()
+    if len(net_results) > 0:
+        print('There are {} results in {}. Please remove it/them.'.format(
+                len(net_results), cfg.DVRK_IMG_PATH))
         print('It should be empty to start an episode.')
         sys.exit()
 
@@ -194,15 +219,20 @@ if __name__ == '__main__':
         # HUGE ASSUMPTION: assume we store image sequentially and do not
         # override them. That means the images should be appearing in
         # alphabetical order in chronological order. We can compute statistics
-        # about these and the actions in separate code.
+        # about these and the actions in separate code. Also, the images should
+        # be saved by the ZividCamera.py script, which ALREADY does processing!
         # -------------------------------------------------------------------- #
-        dvrk_img_paths = sorted(
-            [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
-                    if x[-4:]=='.png']
-        )
-        nb_curr = len(dvrk_img_paths)
+        dvrk_img_paths = get_sorted_imgs()
+        #nb_curr = len(dvrk_img_paths) # No, we save MANY images.
+        if len(dvrk_img_paths) == 0:
+            nb_curr = 0
+        else:
+            # We really want this to represent 'number of image groups' so 1-idx.
+            nb_curr = int((os.path.basename(dvrk_img_paths[-1])).split('-')[0]) + 1
 
-        # Usually this equality should be happening.
+        print(len(dvrk_img_paths), nb_prev, nb_curr)
+
+        # Usually this equality should be happening. Means we just skip the below code.
         if nb_prev == nb_curr:
             continue
         if nb_prev+1 < nb_curr:
@@ -210,16 +240,20 @@ if __name__ == '__main__':
                     nb_prev, nb_curr))
         nb_prev = nb_curr
 
-        # TODO: image processing?
-        dvrk_img = cv2.imread(dvrk_img_paths[-1])
-        img = net_l.process(dvrk_img)
+        # Now we load! We cannot just load the last one, must load c and d. COMBINE THEM.
+        # E.g.: dir_for_imgs/000-c_img_crop_proc.png, dir_for_imgs/000-d_img_crop_proc.png
+        # Note that this is one MINUS nb_curr ... that is 1-idx'd.
+        time.sleep(1)  # just in case delays happen
+        c_path = join(cfg.DVRK_IMG_PATH, '{}-c_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
+        d_path = join(cfg.DVRK_IMG_PATH, '{}-d_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
+        dvrk_c_img = cv2.imread(c_path)
+        dvrk_d_img = cv2.imread(d_path)
+        assert dvrk_c_img.shape == dvrk_d_img.shape == raw_img_shape
+        img = np.dstack( (dvrk_c_img, dvrk_d_img[:,:,0]) )
 
-        # Forward pass, save to directory, wait for next image.
+        # Forward pass, save to directory, wait for next images. Careful of name filtering!
         policy_action = net_l.forward_pass(img)
-        net_results = sorted(
-            [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
-                    if 'result_' in x and '.txt' in x]
-        )
+        net_results = get_net_results()
         nb_calls = len(net_results)+1
         date = '{}'.format( datetime.datetime.now().strftime('%Y-%m-%d-%H-%M') )
         pol = (cfg.WHICH_POLICY).split('/')[0]

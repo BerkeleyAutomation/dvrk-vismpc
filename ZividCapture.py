@@ -132,7 +132,8 @@ def get_and_process_zc_imgs(zc, head=None, debug=True):
     nb_images = 1
 
     while i < nb_images:
-        print(os.listdir(HEAD))
+        if debug:
+            print(os.listdir(HEAD))
         # Should be similar to the way we compute `start_idx` in `run.py`.
         num = len([x for x in os.listdir(HEAD) if 'c_img_crop_proc' in x
                 and '.png' in x])
@@ -158,8 +159,9 @@ def get_and_process_zc_imgs(zc, head=None, debug=True):
         # We fill in NaNs with zeros.
         c_img[np.isnan(c_img)] = 0
         d_img[np.isnan(d_img)] = 0
-        print('\nAfter NaN filtering of the depth images:')
-        U.debug_print_img(d_img)
+        if debug:
+            print('\nAfter NaN filtering of the depth images:')
+            U.debug_print_img(d_img)
         assert d_img.shape == (1200, 1920), d_img.shape
         assert c_img.shape == (1200, 1920, 3), c_img.shape
 
@@ -246,4 +248,4 @@ if __name__ == "__main__":
 
     while True:
         input("Press any key to continue and get/process images ...")
-        get_and_process_zc_imgs(zc, head=dirhead)
+        get_and_process_zc_imgs(zc, head=dirhead, debug=False)
