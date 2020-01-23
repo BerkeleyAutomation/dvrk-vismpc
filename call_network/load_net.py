@@ -41,7 +41,9 @@ class NetLoader:
         self.net_file = net_file
 
         # Exactly same as in the imit/imit_learner code, create actor network.
+        #self.observation_shape = (100, 100, 3)
         self.observation_shape = (56, 56, 4)
+        assert self.observation_shape[0] == self.observation_shape[1]
         shape = (None,) + self.observation_shape
         self.obs0 = tf.placeholder(tf.int32, shape=shape, name='obs0_imgs')
         self.obs0_f_imgs = tf.cast(self.obs0, tf.float32) / 255.0
@@ -74,8 +76,8 @@ class NetLoader:
     def process(self, img, debug=False):
         """Process output from raw dvrk, real world image `img`.
         """
-        h ,w = self.observation_shape[0], self.observation_shape[1]
-        img = cv2.resize(img, (h,w))
+        #h ,w = self.observation_shape[0], self.observation_shape[1]
+        #img = cv2.resize(img, (h,w)) # Daniel: we shouldn't need to resize.
         return img
 
     def act_to_coords(self, img, act, annotate=False, img_file=None):
@@ -86,8 +88,7 @@ class NetLoader:
         Returns the pick point (start) and target (ending), but unfortunately
         w.r.t. full image, and NOT the actual background plane, darn. But at
         least the forward pass itself seems to be working.  Pretty sure this
-        means scaling by 50 to get our [-1,1] to [-50,50] and then adding 50
-        ...
+        means scaling by 50 to get our [-1,1] to [-50,50] and then adding 50.
         """
         assert img.shape == self.observation_shape, img.shape
         assert img.shape[0] == img.shape[1], img.shape  # for now
@@ -97,10 +98,11 @@ class NetLoader:
         # Convert from (-1,1) to the image pixels.  Note: this WILL sometimes
         # include points outside the range because we don't restrict that ---
         # but the agent should easily learn not to do that via IL or RL.
-        pix_pick = (act[0] * 50 + 50,
-                    act[1] * 50 + 50)
-        pix_targ = ((act[0]+act[2]) * 50 + 50,
-                    (act[1]+act[3]) * 50 + 50)
+        XX = int(self.observation_shape[0] / 2)
+        pix_pick = (act[0] * XX + XX,
+                    act[1] * XX + XX)
+        pix_targ = ((act[0]+act[2]) * XX + XX,
+                    (act[1]+act[3]) * XX + XX)
 
         # For image annotation we probably can just restrict to intervals. Also
         # convert to integers for drawing.

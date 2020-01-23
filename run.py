@@ -31,82 +31,11 @@ from skimage.measure import compare_ssim
 import utils as U
 import config as C
 from dvrkClothSim import dvrkClothSim
+sys.path.append('call_network')
+import load_config as cfg
 
 
-def _process_images(c_img, d_img, args, debug=True):
-    """Process images to make it suitable for deep neural networks.
-
-    Mostly mirrors my tests in `camera.py`.
-    """
-    assert d_img.shape == (1200, 1920), d_img.shape
-    assert c_img.shape == (1200, 1920, 3), c_img.shape
-
-    if debug:
-        nb_items = np.prod(np.shape(c_img))
-        nb_not_nan = np.count_nonzero(~np.isnan(c_img))
-        perc = nb_not_nan/float(nb_items)*100
-        print('RGB image shape {}, has {} items'.format(c_img.shape, nb_items))
-        print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan, perc))
-        nb_items = np.prod(np.shape(d_img))
-        nb_not_nan = np.count_nonzero(~np.isnan(d_img))
-        perc = nb_not_nan/float(nb_items)*100
-        print('depth image shape {}, has {} items'.format(d_img.shape, nb_items))
-        print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan, perc))
-    c_img[np.isnan(c_img)] = 0
-    d_img[np.isnan(d_img)] = 0
-
-    # We `inpaint` to fill in the zero pixels, done on raw depth values. Skip if
-    # we're not doing color images due to time? Though we have to be careful if
-    # we want to report both color/depth together? Eh just do together ...
-    if C.IN_PAINT:
-        d_img = U.inpaint_depth_image(d_img, ix=100, iy=500)
-
-    # Process image, but this really means cropping!
-    c_img_crop = camera.process_img_for_net(c_img, ix=0, iy=0)
-    d_img_crop = camera.process_img_for_net(d_img, ix=100, iy=500)
-    assert c_img_crop.shape[0] == c_img_crop.shape[1], c_img.shape
-
-    # Check depth values (in meters), only for the CROPPED regions!
-    if debug:
-        print('\nAfter NaN filtering, ... for CROPPED depth image:')
-        print('  max: {:.3f}'.format(np.max(d_img_crop)))
-        print('  min: {:.3f}'.format(np.min(d_img_crop)))
-        print('  mean: {:.3f}'.format(np.mean(d_img_crop)))
-        print('  medi: {:.3f}'.format(np.median(d_img_crop)))
-        print('  std: {:.3f}'.format(np.std(d_img_crop)))
-        print('also, types for color/depth: {},{}'.format(
-                c_img_crop.dtype, d_img_crop.dtype))
-        print('')
-
-    # Let's process depth, from the cropped one, b/c we don't want values
-    # out the cropped region to influence any depth 'scaling' calculations.
-    d_img_crop = camera.depth_to_3ch(d_img_crop,
-                                     cutoff_min=C.CUTOFF_MIN,
-                                     cutoff_max=C.CUTOFF_MAX)
-    d_img_crop = camera.depth_3ch_to_255(d_img_crop)
-
-    # Try blurring depth, bilateral recommends 9 for offline applications
-    # that need heavy blurring. The two sigmas were 75 by default.
-    d_img_crop_blur = cv2.bilateralFilter(d_img_crop, 9, 100, 100)
-    #d_img_crop_blur = cv2.medianBlur(d_img_crop_blur, 5)
-
-    # TODO: adjust mean pixel values and/or brightness? Not currently doing.
-    #c_img = U._adjust_gamma(c_img, gamma = 1.4)
-
-    # Sept 7: Actually try de-noising? That might help a lot!!
-    print('Now de-noising (note: color/depth are types {}, {})'.format(
-            c_img_crop.dtype, d_img_crop.dtype))  # d_img is a float
-    c_img_crop = cv2.fastNlMeansDenoisingColored(c_img_crop, None, 7, 7, 7, 21)
-    d_img_crop = cv2.fastNlMeansDenoising(d_img_crop, None, 7, 7, 21)
-
-    # Let's save externally but we can do quick debugging here.
-    U.save_image_numbers('tmp', img=c_img_crop, indicator='c_img', debug=True)
-    U.save_image_numbers('tmp', img=d_img_crop, indicator='d_img', debug=True)
-
-    return c_img_crop, d_img_crop
-
-
-def run(args, cam, p):
+def run(args, p, img_shape, img_index):
     """Run one episode, record statistics, etc."""
     stats = defaultdict(list)
     COVERAGE_SUCCESS = 0.92
@@ -136,8 +65,8 @@ def run(args, cam, p):
         # Also, if coverage is high enough, EXIT NOW!
         # ----------------------------------------------------------------------
         c_img, d_img = _process_images(c_img_raw, d_img_raw, args)
-        assert c_img.shape == (100,100,3), c_img.shape
-        assert d_img.shape == (100,100,3), d_img.shape
+        assert c_img.shape == img_shape, c_img.shape
+        assert d_img.shape == img_shape, d_img.shape
         if args.use_color:
             c_tail = "c_img_{}.png".format(str(i).zfill(2))
             img_path = join(C.DVRK_IMG_PATH, c_tail)
@@ -317,12 +246,20 @@ if __name__ == "__main__":
     print('Running with arguments:\n{}'.format(args))
     assert os.path.exists(C.CALIB_FILE), C.CALIB_FILE
 
-    # Setup
+    # With newer code, we run the camera script in a separate file.
+    # The camera script will save in the dvrk config directory. Count up index.
+    #cam = camera.RGBD()
+    img_shape = (56,56,3)
+    imgs = sorted([
+        join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) if '.png' in x]
+    )
+    start_idx = int(os.path.basename(imgs[-1]).split('-')[0]) + 1
+    print('Starting index: {}, from file {}'.format(start_idx, imgs[-1]))
+    print('Should be ONE MORE THAN this file because we will search for start_idx...')
+
+    # Set up the dVRK.
     p = dvrkClothSim()
     p.set_position_origin([0.003, 0.001, -0.060], 0, 'deg')
 
-    #TODO UP TO HERE
-    cam = camera.RGBD()
-
     # Run one episode.
-    stats = run(args, cam, p)
+    stats = run(args, p, img_shape=img_shape, img_index=start_idx)

@@ -2,6 +2,8 @@ import sys
 for p in sys.path:
     if p == '/opt/ros/kinetic/lib/python2.7/dist-packages':
         sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.path.append('call_network')
+import load_config as cfg
 import time
 import datetime
 import zivid
@@ -120,33 +122,38 @@ def continuously_view_2d():
         cv2.waitKey(1)
 
 
-def daniel_test(zc):
-    """ONLY USED FOR TESTING.
-
-    For real experiments, copy relevant code to `run.py`.
-    """
-    HEAD = "/home/davinci/seita/dvrk-vismpc/tmp"
+def get_and_process_zc_imgs(zc, head=None, debug=True):
+    """USE THIS TO PROCESS IMAGES!"""
+    if head is None:
+        HEAD = "/home/davinci/seita/dvrk-vismpc/tmp"
+    else:
+        HEAD = head
     i = 0
     nb_images = 1
 
     while i < nb_images:
         print(os.listdir(HEAD))
-        num = len([x for x in os.listdir(HEAD) if 'c_img_crop' in x])
-        print('current index is at: {}'.format(num))
+        # Should be similar to the way we compute `start_idx` in `run.py`.
+        num = len([x for x in os.listdir(HEAD) if 'c_img_crop_proc' in x
+                and '.png' in x])
+        print('current index we will save is at: {}'.format(num))
         d_img = None
         c_img = None
         while c_img is None or d_img is None:
             c_img, d_img = zc.get_c_d_img()
 
         # Check for NaNs.
-        nb_items = np.prod(np.shape(c_img))
-        nb_not_nan = np.count_nonzero(~np.isnan(c_img))
-        print('RGB image shape {}, has {} items'.format(c_img.shape, nb_items))
-        print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan, nb_not_nan/float(nb_items)*100))
-        nb_items = np.prod(np.shape(d_img))
-        nb_not_nan = np.count_nonzero(~np.isnan(d_img))
-        print('depth image shape {}, has {} items'.format(d_img.shape, nb_items))
-        print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan, nb_not_nan/float(nb_items)*100))
+        if debug:
+            nb_items = np.prod(np.shape(c_img))
+            nb_not_nan = np.count_nonzero(~np.isnan(c_img))
+            print('RGB image shape {}, has {} items'.format(c_img.shape, nb_items))
+            print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan,
+                    nb_not_nan/float(nb_items)*100))
+            nb_items = np.prod(np.shape(d_img))
+            nb_not_nan = np.count_nonzero(~np.isnan(d_img))
+            print('depth image shape {}, has {} items'.format(d_img.shape, nb_items))
+            print('  num NOT nan: {}, or {:.2f}%'.format(nb_not_nan,
+                    nb_not_nan/float(nb_items)*100))
 
         # We fill in NaNs with zeros.
         c_img[np.isnan(c_img)] = 0
@@ -165,48 +172,78 @@ def daniel_test(zc):
             d_img_crop = U.crop_then_resize(d_img, _IX, _IY, _OFFSET, _FINAL_X, _FINAL_Y,
                                             skip_crop=False)
         c_img_crop = U.crop_then_resize(c_img, _IX, _IY, _OFFSET, _FINAL_X, _FINAL_Y)
-        print('\nAfter NaN filtering of the depth images, now the RESIZED image:')
-        U.debug_print_img(d_img_crop)
+        if debug:
+            print('\nAfter NaN filtering of the depth images, now the RESIZED image:')
+            U.debug_print_img(d_img_crop)
 
-        # Let's process depth. Note that we do the cropped vs noncropped
-        # separately, so the cropped one shouldn't have closer noisy values from
-        # the dvrk arm affecting its calculations.
+        # Let's process depth. Note that we do the cropped vs noncropped separately,
+        # so the cropped one shouldn't have closer noisy values from the dvrk arm
+        # affecting its calculations. We want the cropped one for the net.
         d_img      = U.depth_to_3ch(d_img,      cutoff_min=_CUTOFF_MIN, cutoff_max=_CUTOFF_MAX)
         d_img_crop = U.depth_to_3ch(d_img_crop, cutoff_min=_CUTOFF_MIN, cutoff_max=_CUTOFF_MAX)
         d_img      = U.depth_3ch_to_255(d_img)
         d_img_crop = U.depth_3ch_to_255(d_img_crop)
 
+        # c_img_crop and d_img_crop are what we want, but need a little more processing.
         # Try blurring depth, bilateral recommends 9 for offline applications
         # that need heavy blurring. The two sigmas were 75 by default.
-        d_img_crop_blur = cv2.bilateralFilter(d_img_crop, 9, 100, 100)
+        #d_img_crop_proc = cv2.bilateralFilter(d_img_crop, 9, 100, 100)
         #d_img_crop_blur = cv2.medianBlur(d_img_crop_blur, 5)
+        # Could adjust mean pixel values and/or brightness if needed.
+        #cimg = U._adjust_gamma(cimg, gamma = 1.4)
 
-        c_tail           = "{}_c_img.png".format(str(num).zfill(2))
-        d_tail           = "{}_d_img.png".format(str(num).zfill(2))
-        c_tail_crop      = "{}_c_img_crop.png".format(str(num).zfill(2))
-        d_tail_crop      = "{}_d_img_crop.png".format(str(num).zfill(2))
-        d_tail_crop_blur = "{}_d_img_crop_blur.png".format(str(num).zfill(2))
+        # De-noising helps a lot! Careful about the image input to these methods!
+        print('Now de-noising (note: color/depth are types {}, {})'.format(
+                c_img_crop.dtype, d_img_crop.dtype))  # d_img is a float
+        c_img_crop_proc = cv2.fastNlMeansDenoisingColored(c_img_crop, None, 7, 7, 7, 21)
+        d_img_crop_proc = cv2.fastNlMeansDenoising(d_img_crop, None, 7, 7, 21)
 
-        c_img_path           = join(HEAD, c_tail)
-        d_img_path           = join(HEAD, d_tail)
-        c_img_path_crop      = join(HEAD, c_tail_crop)
-        d_img_path_crop      = join(HEAD, d_tail_crop)
-        d_img_path_crop_blur = join(HEAD, d_tail_crop_blur)
-
-        cv2.imwrite(c_img_path,           c_img)
-        cv2.imwrite(d_img_path,           d_img)
-        cv2.imwrite(c_img_path_crop,      c_img_crop)
-        cv2.imwrite(d_img_path_crop,      d_img_crop)
-        cv2.imwrite(d_img_path_crop_blur, d_img_crop_blur)
-
-        print('\n  just saved: {}'.format(c_img_path))
-        print('  just saved: {}'.format(d_img_path))
-        print('  just saved: {}'.format(c_img_path_crop))
-        print('  just saved: {}'.format(d_img_path_crop))
-        print('  just saved: {}'.format(d_img_path_crop_blur))
+        # Save so that we can split on the '-' and use first number as an index.
+        c_tail           = "{}-c_img.png".format(str(num).zfill(3))
+        d_tail           = "{}-d_img.png".format(str(num).zfill(3))
+        c_tail_crop      = "{}-c_img_crop.png".format(str(num).zfill(3))
+        d_tail_crop      = "{}-d_img_crop.png".format(str(num).zfill(3))
+        c_tail_crop_proc = "{}-c_img_crop_proc.png".format(str(num).zfill(3))
+        d_tail_crop_proc = "{}-d_img_crop_proc.png".format(str(num).zfill(3))
+        c_imgpath           = join(HEAD, c_tail)
+        d_imgpath           = join(HEAD, d_tail)
+        c_imgpath_crop      = join(HEAD, c_tail_crop)
+        d_imgpath_crop      = join(HEAD, d_tail_crop)
+        c_imgpath_crop_proc = join(HEAD, c_tail_crop_proc)
+        d_imgpath_crop_proc = join(HEAD, d_tail_crop_proc)
+        cv2.imwrite(c_imgpath,           c_img)
+        cv2.imwrite(d_imgpath,           d_img)
+        cv2.imwrite(c_imgpath_crop,      c_img_crop)
+        cv2.imwrite(d_imgpath_crop,      d_img_crop)
+        cv2.imwrite(c_imgpath_crop_proc, c_img_crop_proc)
+        cv2.imwrite(d_imgpath_crop_proc, d_img_crop_proc)
+        print('\n  just saved: {}'.format(c_imgpath))
+        print('  just saved: {}'.format(d_imgpath))
+        print('  just saved: {}'.format(c_imgpath_crop))
+        print('  just saved: {}'.format(d_imgpath_crop))
+        print('  just saved: {}'.format(c_imgpath_crop_proc))
+        print('  just saved: {}'.format(d_imgpath_crop_proc))
         i += 1
+        # Now PROCESSED images are saved, and we should load using neural net code.
+        # Alternative way to save if needed:
+        #U.save_image_numbers('tmp', img=c_img_crop, indicator='c_img', debug=True)
+        #U.save_image_numbers('tmp', img=d_img_crop, indicator='d_img', debug=True)
+        # But let's just not override what we have in the image directory. I like the
+        # way this is structrued.
 
 
 if __name__ == "__main__":
     zc = ZividCapture()
-    daniel_test(zc)
+
+    # Let this code run in an infinite loop in a separate tab.
+    print('\nCamera created successfully!')
+    print('Now we\'re waiting for images in: {}'.format(cfg.DVRK_IMG_PATH))
+    t_start = time.time()
+    beeps = 0
+    nb_prev = 0
+    nb_curr = 0
+    dirhead = cfg.DVRK_IMG_PATH
+
+    while True:
+        input("Press any key to continue and get/process images ...")
+        get_and_process_zc_imgs(zc, head=dirhead)
