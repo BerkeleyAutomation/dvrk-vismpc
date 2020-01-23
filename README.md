@@ -34,6 +34,15 @@ and then did `pip install -r [filename].txt` to get all the packages updated.
 After that, running `import zivid` should work, and then we later install
 Tensorflow and other neural network code in that virtualenv.
 
+## Calibration
+
+Before using the robot, we need to calibrate it to ensure that we have a
+mapping from coordinates in `[-1,1]` to coordinates w.r.t. the robot's base
+frame. Put a 5x5 checkerboard on top of the foam rubber. Then go into the
+`tests/` folder and run `python test_03_checkerboard_pick_test.py` to check the
+calibration. Use the system Python (it's Python 2.7). Once it looks good, save
+the calibration file (!!) and then move on to experiments.
+
 ## Experimental Usage
 
 Performing our experiments involves several steps, due to loading a separate
@@ -55,9 +64,9 @@ keyboard command.
 settings we can adjust. *In particular, adjust which calibration data we should
 be using*. They are in the form of text files.
 
-5. Finally, *in that same Python3 virtualenv*, run `python run.py` for
-experiments, using the system Python. This requires some keyboard strokes. *The
-code runs one episode* and then terminates.  Repeat for more episodes.
+5. Finally, run `python run.py` for experiments, using the system Python. This
+requires some keyboard strokes. *The code runs one episode* and then
+terminates.  Repeat for more episodes.
 
 ## Tips
 
@@ -73,7 +82,7 @@ code runs one episode* and then terminates.  Repeat for more episodes.
 
 ## Quick Start
 
-Here's a minimal working example. Put this set of code in `tests/test_01_positions.py`:
+Here's a minimal working example, e.g., could be in `tests/test_01_positions.py`:
 
 ```python
 import sys

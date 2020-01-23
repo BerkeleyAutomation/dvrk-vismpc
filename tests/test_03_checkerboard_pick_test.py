@@ -1,10 +1,11 @@
 """Test if calibration is working. This can be run as a stand alone file, i.e.:
 
-python test_03_checkerboard_pick_test.py
+python test_03_checkerboard_pick_test.py (we add '..' to sys.path)
 
 should be enough. Be careful that the position is safe!  You can do a sys.exit
 and just do one action repeatedly for each corner of the checkerboard. CHECK
-WHICH MAPPING GRID WE'RE USING!
+WHICH MAPPING GRID WE'RE USING! Then repeat the process for all of the points
+later as a sanity check, and to take a video.
 """
 import sys
 sys.path.append('..')
@@ -25,10 +26,10 @@ if __name__ == "__main__":
     pose_deg = p.arm.get_current_pose(unit='deg')
     print('current arm pose: {}'.format(pose_deg))
 
-    # Do this just to do one action, to check if calibration is working. Make
-    # dx,dy both zero so the robot does not move to a second spot.
-    ## x = 1.0
-    ## y = 1.0
+    ## # Do this just to do one action, to check if calibration is working. Make
+    ## # dx,dy both zero so the robot does not move to a second spot.
+    ## x = -1.0
+    ## y = -1.0
     ## dx = 0.0
     ## dy = 0.0
     ## U.move_p_from_net_output(x, y, dx, dy, row_board, column_board, data_square,
