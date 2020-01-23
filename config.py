@@ -1,7 +1,7 @@
 """Adjust configuration here for settings, to be loaded in other code.
 
 This is used for surgical robotics and any Python2 code. DO NOT MERGE WITH
-load_config in the neural net code.
+load_config in the neural net code. So there are two config files.
 
 Do not use the camera code here because now the camera uses python3.
 """
@@ -28,10 +28,10 @@ DVRK_IMG_PATH = 'dir_for_imgs/'
 # CALIBRATION FILE
 # ---------------------------------------------------------------------------- #
 
-CALIB_FILE = 'tests/mapping_table_09-04_second_calib'
+CALIB_FILE = 'tests/mapping_2020_01_16_psm1'
 ROW_BOARD = 6
 COL_BOARD = 6
-CLOTH_HEIGHT = -0.010  # meters
+CLOTH_HEIGHT = -0.000  # meters
 
 DATA_SQUARE = U.load_mapping_table(row_board=ROW_BOARD,
                                    column_board=COL_BOARD,

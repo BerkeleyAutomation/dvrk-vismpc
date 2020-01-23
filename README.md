@@ -31,8 +31,12 @@ virtualenv venvs/py3-vismpc-dvrk  --python=python3
 ```
 
 and then did `pip install -r [filename].txt` to get all the packages updated.
-After that, running `import zivid` should work, and then we later install
-Tensorflow and other neural network code in that virtualenv.
+After that, running `import zivid` should work. This should be the same
+virtualenv that we use for loading TensorFlow.
+
+**Update: not sure what happened but we may have to install a Python2
+virtualenv as well that uses the system site packages, so that we can do `pip
+install scikit-learn` and get the structural similarity code ... stay tuned!**
 
 ## Calibration
 
@@ -62,7 +66,8 @@ keyboard command.
 
 4. Check the configuration file in `config.py` which will contain a bunch of
 settings we can adjust. *In particular, adjust which calibration data we should
-be using*. They are in the form of text files.
+be using*. They are in the form of text files. There is a SECOND config file in
+the network loading folder. Don't forget!
 
 5. Finally, run `python run.py` for experiments, using the system Python. This
 requires some keyboard strokes. *The code runs one episode* and then

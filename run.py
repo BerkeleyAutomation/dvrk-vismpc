@@ -31,12 +31,11 @@ from skimage.measure import compare_ssim
 import utils as U
 import config as C
 from dvrkClothSim import dvrkClothSim
-import camera
 
 
 def _process_images(c_img, d_img, args, debug=True):
     """Process images to make it suitable for deep neural networks.
-    
+
     Mostly mirrors my tests in `camera.py`.
     """
     assert d_img.shape == (1200, 1920), d_img.shape
@@ -216,7 +215,7 @@ def run(args, cam, p):
                         action, exponent))
             else:
                 exponent = 0
- 
+
         # ----------------------------------------------------------------------
         # STEP 4. If the output would result in a dangerous position, human
         # stops by hitting ESC key. Otherwise, press any other key to continue.
@@ -310,21 +309,20 @@ if __name__ == "__main__":
     # I would just set all to reasonable defaults, or put them in the config file.
     parser= argparse.ArgumentParser()
     parser.add_argument('--use_other_color', action='store_true')
-    parser.add_argument('--use_color', type=int) # 1 = True
+    #parser.add_argument('--use_color', type=int) # 1 = True
     parser.add_argument('--tier', type=int)
     parser.add_argument('--max_ep_length', type=int, default=10)
     args = parser.parse_args()
     assert args.tier is not None
-    assert args.use_color is not None
     print('Running with arguments:\n{}'.format(args))
+    assert os.path.exists(C.CALIB_FILE), C.CALIB_FILE
 
     # Setup
     p = dvrkClothSim()
     p.set_position_origin([0.003, 0.001, -0.060], 0, 'deg')
-    cam = camera.RGBD()
 
-    assert os.path.exists(C.CALIB_FILE), C.CALIB_FILE
+    #TODO UP TO HERE
+    cam = camera.RGBD()
 
     # Run one episode.
     stats = run(args, cam, p)
-

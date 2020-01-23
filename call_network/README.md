@@ -25,7 +25,7 @@ These subsequent commands will assume your virtualenv is activated.
 This is not required, but I strongly suggest installing iPython with: `pip
 install ipython`.
 
-Install Tensorflow 1.13.1 with the GPU:
+Install Tensorflow 1.13.1 with the GPU (edit: using the CPU actually):
 
 ```
 pip install tensorflow-gpu==1.13.1
@@ -68,4 +68,3 @@ python call_network/load_net.py
 
 and then run the dvrk code. The script should loop forever, periodically
 checking for an image in the target directory.
-

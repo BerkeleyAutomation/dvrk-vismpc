@@ -5,6 +5,8 @@ to show intuition in a paper.
 
 It's simlar to the version in baselines-fork but I thought it'd be better to
 use a file contained within dvrk_python, or at least as reasonably as we can.
+Thus you have to clone our baselines-fork and then do `pip install -e .` in
+that directory.
 
 The removal of the Python2.7 package is necessary due to ROS, see:
     https://stackoverflow.com/questions/43019951/
@@ -39,7 +41,7 @@ class NetLoader:
         self.net_file = net_file
 
         # Exactly same as in the imit/imit_learner code, create actor network.
-        self.observation_shape = (100, 100, 3)
+        self.observation_shape = (56, 56, 4)
         shape = (None,) + self.observation_shape
         self.obs0 = tf.placeholder(tf.int32, shape=shape, name='obs0_imgs')
         self.obs0_f_imgs = tf.cast(self.obs0, tf.float32) / 255.0

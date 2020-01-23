@@ -15,10 +15,10 @@ from os.path import join
 import utils as U
 
 # ---------------------------------------------------------------------------- #
-# Camera configuration, keep separate from internal `camera.py` testing.
-# Tune cutoff carefully, it's in meters.
+# Camera configuration. Tune cutoff carefully, it's in meters.
 # ---------------------------------------------------------------------------- #
-# Minho's new camera code returns depth in millimeters.
+# Update: Minho's new camera code returns depth in millimeters. We'll be using
+# this for actual calibration so please keep these settings correct.
 # ---------------------------------------------------------------------------- #
 _CUTOFF_MIN = 780.0
 _CUTOFF_MAX = 895.0
@@ -121,7 +121,10 @@ def continuously_view_2d():
 
 
 def daniel_test(zc):
-    """For real experiments, copy relevant code to the run script."""
+    """ONLY USED FOR TESTING.
+
+    For real experiments, copy relevant code to `run.py`.
+    """
     HEAD = "/home/davinci/seita/dvrk-vismpc/tmp"
     i = 0
     nb_images = 1
