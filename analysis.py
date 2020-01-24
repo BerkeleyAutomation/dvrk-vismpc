@@ -124,6 +124,8 @@ def analyze_group(head):
         ss['max'].append( np.max(data['coverage'][1:]) )
         ss['min'].append( np.min(data['coverage'][1:]) )
         # Special case ... I think I recorded duplicate coverage.
+        # Update: actually I think I got rid of this after the first case (T1,
+        # episode1, DAgger) so I should change this if it poses a problem.
         if len(data['actions']) == 9:
             assert len(data['d_img']) == 11, len(data['d_img'])
             ss['avg'].append( np.mean(data['coverage'][1:-1]) )  # duplicate at end, so up to -1
@@ -131,6 +133,7 @@ def analyze_group(head):
             ss['avg'].append( np.mean(data['coverage'][1:]) )
         ss['beg'].append( data['coverage'][0] )
         ss['end'].append( data['coverage'][-1] )
+        ss['nacts'].append( len(data['actions']) )
 
         # Save images here.
         nc = num_counted  # Use as an episode index, sort of ...
@@ -144,22 +147,30 @@ def analyze_group(head):
 
     # Multiply by 100 :-)
     for key in ss.keys():
-        ss[key] = np.array(ss[key]) * 100
+        if key != 'nacts':
+            ss[key] = np.array(ss[key]) * 100
     print('\nOverall stats across {} trials:'.format(num_counted))
     print('start: {:.1f} +/- {:.1f}'.format(np.mean(ss['beg']), np.std(ss['beg'])) )
     print('end:   {:.1f} +/- {:.1f}'.format(np.mean(ss['end']), np.std(ss['end'])) )
     print('max:   {:.1f} +/- {:.1f}'.format(np.mean(ss['max']), np.std(ss['max'])) )
     print('min:   {:.1f} +/- {:.1f}'.format(np.mean(ss['min']), np.std(ss['min'])) )
     print('avg:   {:.1f} +/- {:.1f}'.format(np.mean(ss['avg']), np.std(ss['avg'])) )
+    print('nacts: {:.1f} +/- {:.1f}'.format(np.mean(ss['nacts']), np.std(ss['nacts'])) )
 
-    # In readable format for LaTeX:
+    # In readable format for LaTeX: (Update Jan 2020, don't want avg, but max acts)
+    #_str = '& {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} \\\\'.format(
+    #        np.mean(ss['beg']),np.std(ss['beg']),
+    #        np.mean(ss['end']),np.std(ss['end']),
+    #        np.mean(ss['max']),np.std(ss['max']),
+    #        np.mean(ss['avg']),np.std(ss['avg']),
+    #)
     _str = '& {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} \\\\'.format(
             np.mean(ss['beg']),np.std(ss['beg']),
             np.mean(ss['end']),np.std(ss['end']),
             np.mean(ss['max']),np.std(ss['max']),
-            np.mean(ss['avg']),np.std(ss['avg']),
+            np.mean(ss['nacts']),np.std(ss['nacts']),
     )
-    #print(_str)
+    print(_str)
     return _str, num_counted
 
 
@@ -267,7 +278,7 @@ if __name__ == "__main__":
     print('\nNumber of trials we record:')
     #print(nb1, nb2, nb3, nb4, nb5, nb6)
     print(nb1, nb3, nb5)
-    print('\n\nCopy and paste this for LaTeX:\nstart, end, max, mean')
+    print('\n\nCopy and paste this for LaTeX:\nstart, end, max, nacts')
     print('T1 RGBD DAgger '+ str1)
     #print('T1 Dep. '+ str2)
     print('T2 RGBD DAgger '+ str3)
