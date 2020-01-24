@@ -34,7 +34,7 @@ COL_BOARD = 6
 
 # In meters, also due to checkerboard height! We have a foam rubber, it's OK. :-)
 # Decrease this value to decrease the height the gripper lands at.
-CLOTH_HEIGHT = -0.009
+CLOTH_HEIGHT = -0.008
 
 DATA_SQUARE = U.load_mapping_table(row_board=ROW_BOARD,
                                    column_board=COL_BOARD,
