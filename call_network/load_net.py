@@ -94,15 +94,17 @@ class NetLoader:
         w.r.t. full image, and NOT the actual background plane, darn. But at
         least the forward pass itself seems to be working.  Pretty sure this
         means scaling by 50 to get our [-1,1] to [-50,50] and then adding 50.
+
+        EDIT: this may be wrong but I don't think we call act_to_coords. Reason
+        is we have to invert a coordinate for cv2 pixels.
         """
         assert img.shape == self.observation_shape, img.shape
         assert img.shape[0] == img.shape[1], img.shape  # for now
         coord_min = 0
         coord_max = img.shape[0]
 
-        # Convert from (-1,1) to the image pixels.  Note: this WILL sometimes
-        # include points outside the range because we don't restrict that ---
-        # but the agent should easily learn not to do that via IL or RL.
+        # Convert from (-1,1) to the image pixels. We shouldn't have points
+        # outside that because our policy network has a tanh at the end.
         XX = int(self.observation_shape[0] / 2)
         pix_pick = (act[0] * XX + XX,
                     act[1] * XX + XX)

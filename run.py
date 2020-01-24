@@ -21,6 +21,52 @@ import config as C
 import utils as U
 
 
+def action_correction(a, freq, c_img_100x100):
+    """Action correction if we just barely miss the cloth.
+
+    Should only be called if we trigger a structural similiarity check between
+    two consecutive images.
+    """
+    # Gives us the action in pixels. NOTE THE 100x100 ASSUMPTIUN.
+    assert c_img_100x100.shape == (100,100,3)
+    coord_min = 0
+    coord_max = 100
+
+    # Convert from (-1,1) to the image pixels.
+    XX = 100
+    pix_pick = (act[0] * XX + XX,
+                act[1] * XX + XX)
+    pix_targ = ((act[0]+act[2]) * XX + XX,
+                (act[1]+act[3]) * XX + XX)
+
+    # Find the closest image pixels of the substrate.
+    close_pix = (c0, c1)
+    close_pick = ((c0[0] - XX) / XX,
+                  (c1[1] - XX) / XX)
+
+    # Then compute a direction for the pix_pick which will be more likely to touch it.
+    # direction from pix_pick --> close_pick
+
+    # Heuristics, want to avoid moving towards the edge, right?
+
+    ## For image annotation we probably can just restrict to intervals. Also
+    ## convert to integers for drawing.
+    #pix_pick = ( int(max(min(pix_pick[0],coord_max),coord_min)),
+    #             int(max(min(pix_pick[1],coord_max),coord_min)) )
+    #pix_targ = ( int(max(min(pix_targ[0],coord_max),coord_min)),
+    #             int(max(min(pix_targ[1],coord_max),coord_min)) )
+    ## Now we annotate, save the image, and return pixels after all this.
+    #assert img_file is not None
+    #cv2.circle(img, center=pix_pick, radius=5, color=cfg.BLUE, thickness=1)
+    #cv2.circle(img, center=pix_targ, radius=3, color=cfg.RED, thickness=1)
+    #fname = img_file
+    #cv2.imwrite(filename=fname, img=img)
+
+    new_act = np.array( [a[0], a[1], a[2], a[3]] )
+    print('our new corrected action: {}, freq {}'.format(new_act, freq))
+    return new_act
+
+
 def run(args, p, img_shape, save_path):
     """Run one episode, record statistics, etc.
 
@@ -28,7 +74,9 @@ def run(args, p, img_shape, save_path):
     """
     stats = defaultdict(list)
     COVERAGE_SUCCESS = 0.92
-    exponent = 0
+    SS_THRESH = 0.95
+    dumb_correction = True
+    freq = 0
 
     for i in range(args.max_ep_length):
         print('\n*************************************')
@@ -119,16 +167,18 @@ def run(args, p, img_shape, save_path):
             stats['diff_ss_d'].append(diff_ss_d)
 
             # Apply action 'compression'? A 0.95 cutoff empirically works well.
-            ss_thresh = 0.95
-            if diff_ss_c > ss_thresh:
-                exponent += 1
-                print('NOTE structural similiarity exceeds {}'.format(ss_thresh))
-                action[0] = action[0] * (0.9 ** exponent)
-                action[1] = action[1] * (0.9 ** exponent)
-                print('revised action after \'compression\': {} w/exponent {}'.format(
-                        action, exponent))
+            if diff_ss_c > SS_THRESH:
+                freq += 1
+                print('NOTE structural similiarity exceeds {}'.format(SS_THRESH))
+                if dumb_correction:
+                    action[0] = action[0] * (0.9 ** freq)
+                    action[1] = action[1] * (0.9 ** freq)
+                    print('revised action after \'dumb compression\': {}, freq {}'.format(
+                            action, freq))
+                else:
+                    action = action_correction(action, freq, c_img_100x100)
             else:
-                exponent = 0
+                freq = 0
 
         # ----------------------------------------------------------------------
         # STEP 4. If the output would result in a dangerous position, human
