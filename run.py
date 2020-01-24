@@ -1,18 +1,4 @@
 """Use this for the main experiments. It runs one episode only.
-
-NOTE: I am running into this error with a line in the camera file:
-
-Traceback (most recent call last):
-  File "run.py", line 73, in <module>
-    cam = camera.RGBD()
-  File "/home/davinci0/seita/dvrk_python/camera.py", line 18, in __init__
-    rospy.init_node("camera")
-  File "/opt/ros/kinetic/lib/python2.7/dist-packages/rospy/client.py", line 274, in init_node
-    raise rospy.exceptions.ROSException("rospy.init_node() has already been called with different arguments: "+str(_init_node_args))
-rospy.exceptions.ROSException: rospy.init_node() has already been called with different arguments: ('dvrkArm_node', ['run.py'], True, 4, False, False
-
-This code (`run.py`) will run fine if we just comment that line out, but I worry
-if that functionality is needed.
 """
 import argparse
 import os
@@ -171,12 +157,15 @@ def run(args, p, img_shape, save_path):
         y  = action[1]
         dx = action[2]
         dy = action[3]
+        start_t = time.time()
         U.move_p_from_net_output(x, y, dx, dy,
                                  row_board=C.ROW_BOARD,
                                  col_board=C.COL_BOARD,
                                  data_square=C.DATA_SQUARE,
                                  p=p)
-        print('Finished executing action.')
+        elapsed_t = time.time() - start_t
+        stats['act_time'].append(elapsed_t)
+        print('Finished executing action in {:.2f} seconds.'.format(elapsed_t))
 
     # If we ended up using all actions above, we really need one more image.
     if len(stats['c_img']) == args.max_ep_length:
