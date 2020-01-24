@@ -176,7 +176,7 @@ def run(args, p, img_shape, save_path):
 
         # Results from the neural network -- still use to check if we get a NEW image.
         results = U.get_net_results()
-        print('Waiting for one more result to the {} we have so far'.format(len(results)))
+        print('Just get the very last image we need! (Have {} so far)'.format(len(results)))
         while len(results) == i:
             time.sleep(1)
             results = U.get_net_results()
@@ -276,7 +276,7 @@ if __name__ == "__main__":
 
     # Set up the dVRK. Larger y axis value = avoids shadow in our setup.
     p = dvrkClothSim()
-    p.set_position_origin([0.003, 0.025, -0.060], 0, 'deg')
+    p.set_position_origin([0.005, 0.033, -0.060], 0, 'deg')
 
     # Run one episode.
     stats = run(args, p, img_shape=img_shape, save_path=save_path)
