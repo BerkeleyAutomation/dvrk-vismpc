@@ -159,6 +159,7 @@ def run_test(net_l):
         print('{}    \t {} ---> {},     from {}'.format(result, ps, pe, img_file))
 
 
+# Duplicated in `utils.py`, careful if changing!
 def get_sorted_imgs():
     res = sorted(
         [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
@@ -167,6 +168,7 @@ def get_sorted_imgs():
     return res
 
 
+# Duplicated in `utils.py` careful if changing!
 def get_net_results():
     net_results = sorted(
         [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
@@ -229,8 +231,7 @@ if __name__ == '__main__':
         else:
             # We really want this to represent 'number of image groups' so 1-idx.
             nb_curr = int((os.path.basename(dvrk_img_paths[-1])).split('-')[0]) + 1
-
-        print(len(dvrk_img_paths), nb_prev, nb_curr)
+        #print(len(dvrk_img_paths), nb_prev, nb_curr)
 
         # Usually this equality should be happening. Means we just skip the below code.
         if nb_prev == nb_curr:

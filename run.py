@@ -28,14 +28,14 @@ from collections import defaultdict
 from os.path import join
 from skimage.measure import compare_ssim
 # Stuff from our code base.
-import utils as U
-import config as C
 from dvrkClothSim import dvrkClothSim
-sys.path.append('call_network')
-import load_config as cfg
+#sys.path.append('call_network')
+#import load_config as cfg
+import config as C
+import utils as U
 
 
-def run(args, p, img_shape, img_index):
+def run(args, p, img_shape, save_path):
     """Run one episode, record statistics, etc."""
     stats = defaultdict(list)
     COVERAGE_SUCCESS = 0.92
@@ -101,10 +101,7 @@ def run(args, p, img_shape, img_index):
         # run it in a separate terminal tab, right?) and then show it to a human.
         # HUGE ASSUMPTION: that the last text file indicates the action we want.
         # ----------------------------------------------------------------------
-        dvrk_action_paths = sorted(
-                [join(C.DVRK_IMG_PATH,x) for x in os.listdir(C.DVRK_IMG_PATH) \
-                    if x[-4:]=='.txt']
-        )
+        dvrk_action_paths = U.get_net_results()
         assert len(dvrk_action_paths) > 0, 'Did you run the neural net code??'
         action = np.loadtxt(dvrk_action_paths[-1])
         print('neural net says: {}'.format(action))
@@ -208,26 +205,6 @@ def run(args, p, img_shape, img_index):
     print('  len(c_img): {}'.format(len(stats['c_img'])))
     print('  len(d_img): {}'.format(len(stats['d_img'])))
     print('  len(actions): {}'.format(len(stats['actions'])))
-
-    # File path shenanigans.
-    if args.use_color:
-        if args.use_other_color:
-            save_path = join('results', 'tier{}_color_yellowcloth'.format(args.tier))
-        else:
-            save_path = join('results', 'tier{}_color'.format(args.tier))
-    else:
-        if args.use_other_color:
-            save_path = join('results', 'tier{}_depth_yellowcloth'.format(args.tier))
-        else:
-            save_path = join('results', 'tier{}_depth'.format(args.tier))
-    if not os.path.exists(save_path):
-        os.makedirs(save_path)
-
-    count = len([x for x in os.listdir(save_path) if 'ep_' in x and '.pkl' in x])
-    save_path = join(
-            save_path,
-            'ep_{}_{}.pkl'.format(str(count).zfill(3), U.get_date())
-    )
     print('All done with episode! Saving stats to: {}'.format(save_path))
     with open(save_path, 'wb') as fh:
         pickle.dump(stats, fh)
@@ -243,6 +220,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_ep_length', type=int, default=10)
     args = parser.parse_args()
     assert args.tier is not None
+    args.use_rgbd = True
     print('Running with arguments:\n{}'.format(args))
     assert os.path.exists(C.CALIB_FILE), C.CALIB_FILE
 
@@ -250,16 +228,49 @@ if __name__ == "__main__":
     # The camera script will save in the dvrk config directory. Count up index.
     #cam = camera.RGBD()
     img_shape = (56,56,3)
-    imgs = sorted([
-        join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) if '.png' in x]
+
+    # Assume a clean directory where we store things FOR THIS EPISODE ONLY.
+    dvrk_img_paths = U.get_sorted_imgs()
+    net_results = U.get_net_results()
+    if len(dvrk_img_paths) > 0:
+        print('There are {} images in {}. Please remove it/them.'.format(
+                len(dvrk_img_paths), C.DVRK_IMG_PATH))
+        print('It should be empty to start an episode.')
+        sys.exit()
+    if len(net_results) > 0:
+        print('There are {} results in {}. Please remove it/them.'.format(
+                len(net_results), C.DVRK_IMG_PATH))
+        print('It should be empty to start an episode.')
+        sys.exit()
+
+    # Determine the file name to save, for permanent storage.
+    if args.use_rgbd:
+        save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+    else:
+        raise ValueError()
+    # Ignore for now, but may re-visit when we do benchmarks with earlier networks?
+    #if args.use_color:
+    #    if args.use_other_color:
+    #        save_path = join('results', 'tier{}_color_yellowcloth'.format(args.tier))
+    #    else:
+    #        save_path = join('results', 'tier{}_color'.format(args.tier))
+    #else:
+    #    if args.use_other_color:
+    #        save_path = join('results', 'tier{}_depth_yellowcloth'.format(args.tier))
+    #    else:
+    #        save_path = join('results', 'tier{}_depth'.format(args.tier))
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
+    count = len([x for x in os.listdir(save_path) if 'ep_' in x and '.pkl' in x])
+    save_path = join(save_path,
+        'ep_{}_{}.pkl'.format(str(count).zfill(3), U.get_date())
     )
-    start_idx = int(os.path.basename(imgs[-1]).split('-')[0]) + 1
-    print('Starting index: {}, from file {}'.format(start_idx, imgs[-1]))
-    print('Should be ONE MORE THAN this file because we will search for start_idx...')
+    print('Saving to: {}'.format(save_path))
 
     # Set up the dVRK.
     p = dvrkClothSim()
     p.set_position_origin([0.003, 0.001, -0.060], 0, 'deg')
 
     # Run one episode.
-    stats = run(args, p, img_shape=img_shape, img_index=start_idx)
+    stats = run(args, p, img_shape=img_shape, save_path=save_path)

@@ -8,6 +8,8 @@ import numpy as np
 from os import path
 from os.path import join
 import datetime
+sys.path.append('call_network')
+import load_config as cfg
 
 
 # Useful constants.
@@ -21,6 +23,24 @@ def rad_to_deg(rad):
 
 def deg_to_rad(deg):
     return np.array(deg) * np.pi/180.
+
+
+# Duplicated in `call_network/load_net`, careful if changing!
+def get_sorted_imgs():
+    res = sorted(
+        [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
+            if x[-4:]=='.png']
+    )
+    return res
+
+
+# Duplicated in `call_network/load_net`, careful if changing!
+def get_net_results():
+    net_results = sorted(
+        [join(cfg.DVRK_IMG_PATH,x) for x in os.listdir(cfg.DVRK_IMG_PATH) \
+            if 'result_' in x and '.txt' in x]
+    )
+    return net_results
 
 
 def debug_print_img(img):
