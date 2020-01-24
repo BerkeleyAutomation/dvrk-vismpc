@@ -31,7 +31,9 @@ DVRK_IMG_PATH = 'dir_for_imgs/'
 CALIB_FILE = 'tests/mapping_2020_01_16_psm1'
 ROW_BOARD = 6
 COL_BOARD = 6
-CLOTH_HEIGHT = -0.000  # meters
+
+# meters, also due to checkerboard height! We have a foam rubber, it's OK. :-)
+CLOTH_HEIGHT = -0.008
 
 DATA_SQUARE = U.load_mapping_table(row_board=ROW_BOARD,
                                    column_board=COL_BOARD,

@@ -75,16 +75,14 @@ def run(args, p, img_shape, save_path):
         d_path = join(C.DVRK_IMG_PATH,
                       '{}-d_img_crop_proc_56.png'.format(str(i).zfill(3)))
         c_img_100x100 = cv2.imread(c_path_100x100)
+        coverage = U.calculate_coverage(c_img_100x100)  # tuned for 100x100
         c_img = cv2.imread(c_path)
         d_img = cv2.imread(d_path)
         U.single_means(c_img, depth=False)
         U.single_means(d_img, depth=True)
         assert c_img.shape == d_img.shape == img_shape
         assert args.use_rgbd
-        img = np.dstack( (c_img, d_img[:,:,0]) )
-
-        # NOTE: haven't tuned this yet for newer 56x56 images.
-        coverage = U.calculate_coverage(c_img_100x100)
+        # img = np.dstack( (c_img, d_img[:,:,0]) )  # we don't call net code here
 
         # Ensures we save the final image in case we exit and get high coverage.
         # Make sure it happens BEFORE the `break` command below so we get final imgs.
@@ -98,8 +96,9 @@ def run(args, p, img_shape, save_path):
             break
         else:
             print('\ncurrent coverage: {:.3f}\n'.format(coverage))
-        print('  now wait a few seconds for network to run')
-        time.sleep(5)
+        # Before Jan 2020, action selection happened later. Now it happens earlier.
+        #print('  now wait a few seconds for network to run')
+        #time.sleep(5)
 
         # ----------------------------------------------------------------------
         # STEP 3: show the output of the action to the human. HUGE ASSUMPTION:
@@ -108,8 +107,6 @@ def run(args, p, img_shape, save_path):
         action = np.loadtxt(results[-1])
         print('neural net says: {}'.format(action))
         stats['actions'].append(action)
-
-        sys.exit() #TODO UP TO HERE
 
         # ----------------------------------------------------------------------
         # STEP 3.5, only if we're not on the first action, if current image is
@@ -152,7 +149,10 @@ def run(args, p, img_shape, save_path):
         # The human should NOT normally be using this !!
         # ----------------------------------------------------------------------
         title = '{} -- ESC TO CANCEL (Or if episode done)'.format(action)
-        if args.use_color:
+        if args.use_rgbd:
+            stacked_img = np.hstack( (c_img, d_img) )
+            exit = U.call_wait_key( cv2.imshow(title, stacked_img) )
+        elif args.use_color:
             exit = U.call_wait_key( cv2.imshow(title, c_img) )
         else:
             exit = U.call_wait_key( cv2.imshow(title, d_img) )
@@ -160,6 +160,7 @@ def run(args, p, img_shape, save_path):
         if exit:
             print('Warning: why are we exiting here?')
             print('It should exit naturally due to (a) coverage or (b) time limits.')
+            print('Make sure I clear any results that I do not want to record.')
             break
 
         # ----------------------------------------------------------------------
@@ -175,34 +176,43 @@ def run(args, p, img_shape, save_path):
                                  col_board=C.COL_BOARD,
                                  data_square=C.DATA_SQUARE,
                                  p=p)
-
-        # ----------------------------------------------------------------------
-        # STEP 6. Record statistics. Sleep just in case, also reset images.
-        # Don't save raw images -- causes file sizes to blow up.
-        # ----------------------------------------------------------------------
-        cam.set_color_none()
-        cam.set_depth_none()
-        print('Reset color/depth in camera class, waiting a few seconds ...')
-        time.sleep(3)
+        print('Finished executing action.')
 
     # If we ended up using all actions above, we really need one more image.
     if len(stats['c_img']) == args.max_ep_length:
         assert len(stats['coverage']) == args.max_ep_length, len(stats['coverage'])
-        c_img_raw = None
-        d_img_raw = None
-        print('Waiting for FINAL c_img, & d_img; please press ENTER in the appropriate tab')
-        while c_img_raw is None:
-            c_img_raw = cam.read_color_data()
-        while d_img_raw is None:
-            d_img_raw = cam.read_depth_data()
-        c_img, d_img = _process_images(c_img_raw, d_img_raw, args)
-        coverage = U.calculate_coverage(c_img)
+        i = args.max_ep_length
+
+        # Results from the neural network -- still use to check if we get a NEW image.
+        results = U.get_net_results()
+        print('Waiting for one more result to the {} we have so far'.format(len(results)))
+        while len(results) == i:
+            time.sleep(1)
+            results = U.get_net_results()
+        assert len(results) >= i
+        assert len(results) == i+1, '{} vs {}, {}'.format(i, results, len(results))
+
+        # Similar loading as earlier.
+        c_path_100x100 = join(C.DVRK_IMG_PATH,
+                              '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
+        c_path = join(C.DVRK_IMG_PATH,
+                      '{}-c_img_crop_proc_56.png'.format(str(i).zfill(3)))
+        d_path = join(C.DVRK_IMG_PATH,
+                      '{}-d_img_crop_proc_56.png'.format(str(i).zfill(3)))
+        c_img_100x100 = cv2.imread(c_path_100x100)
+        coverage = U.calculate_coverage(c_img_100x100)  # tuned for 100x100
+        c_img = cv2.imread(c_path)
+        d_img = cv2.imread(d_path)
+        assert c_img.shape == d_img.shape == img_shape
+
+        # Record final stats.
         stats['coverage'].append(coverage)
         stats['c_img'].append(c_img)
         stats['d_img'].append(d_img)
         print('(for full length episode) final coverage: {:.3f}'.format(coverage))
 
     # Final book-keeping and return statistics.
+    stats['coverage'] = np.array(stats['coverage'])
     print('\nEPISODE DONE!')
     print('  coverage: {}'.format(stats['coverage']))
     print('  len(coverage): {}'.format(len(stats['coverage'])))
@@ -272,9 +282,9 @@ if __name__ == "__main__":
     )
     print('Saving to: {}'.format(save_path))
 
-    # Set up the dVRK.
+    # Set up the dVRK. Larger y axis value = avoids shadow in our setup.
     p = dvrkClothSim()
-    p.set_position_origin([0.003, 0.001, -0.060], 0, 'deg')
+    p.set_position_origin([0.003, 0.025, -0.060], 0, 'deg')
 
     # Run one episode.
     stats = run(args, p, img_shape=img_shape, save_path=save_path)
