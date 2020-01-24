@@ -236,6 +236,12 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     Can do stuff like this to annotate an image if it helps:
         cv2.circle(img, center=pix_pick, radius=5, color=cfg.BLUE, thickness=1)
         cv2.circle(img, center=pix_targ, radius=3, color=cfg.RED, thickness=1)
+
+    For contours, help(cv2.findContours()) told me:
+        findContours(image, mode, method[, contours[, hierarchy[, offset]]]) ->
+            image, contours, hierarchy
+    so it returns three values. See also:
+    https://www.pyimagesearch.com/2014/04/21/building-pokedex-python-finding-game-boy-screen-step-4-6/#comment-378667
     """
     # Convert from (-1,1) to the image pixels.
     # Edit: well if we annotate these in opencv, we have to invert the y, so
@@ -315,7 +321,7 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
 
     # find contours
     #contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    (_, contours, _) = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     print('found contours, length {}'.format(len(contours)))
 
     # prune contour points on the edges of the bed
