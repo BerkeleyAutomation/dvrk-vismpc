@@ -76,8 +76,8 @@ def run(args, p, img_shape, save_path):
         stats['c_img'].append(c_img)
         stats['d_img'].append(d_img)
 
-        if coverage > COVERAGE_SUCCESS:
-            print('\nCOVERAGE SUCCESS: {:.3f} > {:.3f}, exiting ...\n'.format(
+        if coverage >= COVERAGE_SUCCESS:
+            print('\nCOVERAGE SUCCESS: {:.3f} >= {:.3f}, exiting ...\n'.format(
                     coverage, COVERAGE_SUCCESS))
             break
         else:
@@ -168,7 +168,8 @@ def run(args, p, img_shape, save_path):
         print('Finished executing action in {:.2f} seconds.'.format(elapsed_t))
 
     # If we ended up using all actions above, we really need one more image.
-    if len(stats['c_img']) == args.max_ep_length:
+    # Edit: need to handle case of when we exceeded coverage after 9th action.
+    if len(stats['c_img']) == args.max_ep_length and coverage < COVERAGE_SUCCESS:
         assert len(stats['coverage']) == args.max_ep_length, len(stats['coverage'])
         i = args.max_ep_length
 
