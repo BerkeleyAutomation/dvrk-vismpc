@@ -73,6 +73,7 @@ def run(args, p, img_shape, save_path):
         # Ensures we save the final image in case we exit and get high coverage.
         # Make sure it happens BEFORE the `break` command below so we get final imgs.
         stats['coverage'].append(coverage)
+        stats['c_img_100x100'].append(c_img_100x100)
         stats['c_img'].append(c_img)
         stats['d_img'].append(d_img)
 
@@ -197,6 +198,7 @@ def run(args, p, img_shape, save_path):
 
         # Record final stats.
         stats['coverage'].append(coverage)
+        stats['c_img_100x100'].append(c_img_100x100)
         stats['c_img'].append(c_img)
         stats['d_img'].append(d_img)
         print('(for full length episode) final coverage: {:.3f}'.format(coverage))
