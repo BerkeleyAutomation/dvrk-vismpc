@@ -64,10 +64,17 @@ def run(args, p, img_shape, save_path):
 
         # ----------------------------------------------------------------------
         # STEP 2: load those images, using same code as in the network loading
-        # code. If coverage is high enough, exit now.
+        # code. If coverage is high enough, exit now. Note: we load 56x56 for
+        # training but use 100x100 for computing coverage as we have several
+        # values that are heavily tuned for that.
         # ----------------------------------------------------------------------
-        c_path = join(C.DVRK_IMG_PATH, '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
-        d_path = join(C.DVRK_IMG_PATH, '{}-d_img_crop_proc.png'.format(str(i).zfill(3)))
+        c_path_100x100 = join(C.DVRK_IMG_PATH,
+                              '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
+        c_path = join(C.DVRK_IMG_PATH,
+                      '{}-c_img_crop_proc_56.png'.format(str(i).zfill(3)))
+        d_path = join(C.DVRK_IMG_PATH,
+                      '{}-d_img_crop_proc_56.png'.format(str(i).zfill(3)))
+        c_img_100x100 = cv2.imread(c_path_100x100)
         c_img = cv2.imread(c_path)
         d_img = cv2.imread(d_path)
         U.single_means(c_img, depth=False)
@@ -77,7 +84,7 @@ def run(args, p, img_shape, save_path):
         img = np.dstack( (c_img, d_img[:,:,0]) )
 
         # NOTE: haven't tuned this yet for newer 56x56 images.
-        coverage = U.calculate_coverage(c_img)
+        coverage = U.calculate_coverage(c_img_100x100)
 
         # Ensures we save the final image in case we exit and get high coverage.
         # Make sure it happens BEFORE the `break` command below so we get final imgs.

@@ -24,3 +24,4 @@ venv*
 
 # Saving results here
 results/
+tmp/

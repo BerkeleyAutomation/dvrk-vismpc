@@ -2,6 +2,11 @@
 """
 import os
 import sys
+## Maybe? Might need this if running `python utils.py`.
+## Actually, if running `python utils.py` just use system python.
+#for p in sys.path:
+#    if p == '/opt/ros/kinetic/lib/python2.7/dist-packages':
+#        sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 import time
 import numpy as np
@@ -177,32 +182,49 @@ def inpaint_depth_image(d_img, ix, iy, offset):
     return d_img
 
 
-def calculate_coverage(c_img, bounding_dims=(11,87,10,88), rgb_cutoff=170, display=False):
+def calculate_coverage(c_img, bounding_dims=(10,91,10,91), rgb_cutoff=90, display=False):
     """
     Given precomputed constant preset locations that represent the corners in a
     clockwise order, it computes the percent of pixels that are above a certain
     threshold in that region which represents the percent coverage.
 
-    The bounding dimensions represent (min_x, max_x, min_y, max_y). To decrease
-    height, confusingly, decrease min_x and max_x.  The default bounding_dims
-    work well empirically. COLOR IMAGES ONLY!!
+    The bounding dimensions represent (min_x, max_x, min_y, max_y). The default
+    bounding_dims work well empirically but are dependent on camera and foam
+    rubber position!! COLOR IMAGES ONLY!! Example: if we are looking at images,
+    and see stuff at the *bottom* that we need to include then increase max_x,
+    if we want to remove stuff from the bottom, decrease max_x. To tune that, I
+    just run `python utils.py` with an example set of images.
 
-    Returns a value between [0,1].
+    Returns a coverage value between [0,1].
+
+    NOTE: this should be called with the system python.
     """
     min_x, max_x, min_y, max_y = bounding_dims
     substrate = c_img[min_x:max_x,min_y:max_y,:]
     is_not_covered = np.logical_and(np.logical_and(substrate[:,:,0] > rgb_cutoff,
         substrate[:,:,1] > rgb_cutoff), substrate[:,:,2] > rgb_cutoff)
-
-    # can display this fake image to sanity check this method
     fake_image = np.array(is_not_covered * 255, dtype = np.uint8)
+
+    # Display a bunch of images for debugging
+    import PIL
+    from PIL import (Image, ImageDraw)
+    display_img = Image.new(mode='L', size=(300,300), color=200)
+    draw = ImageDraw.Draw(display_img)
+    display_img.paste(PIL.Image.fromarray(c_img), (0, 0))
+    display_img.paste(PIL.Image.fromarray(substrate), (100+min_x, min_y))
+    display_img.paste(PIL.Image.fromarray(substrate), (min_x, 100+min_y))
+    display_img.paste(PIL.Image.fromarray(fake_image), (200+min_x, min_y))
+
+    coverage = 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
+
     if display:
-        cv2.imshow("1", substrate)
-        cv2.imshow("2", fake_image)
+        cv2.imshow("coverage: {:.3f}".format(coverage), np.array(display_img) )
+        #cv2.imshow("1", substrate)
+        #cv2.imshow("2", fake_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    return 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
+    return coverage
 
 
 def load_mapping_table(row_board, column_board, file_name, cloth_height=0.005):
@@ -398,15 +420,22 @@ def _adjust_gamma(image, gamma=1.0):
 
 
 if __name__ == "__main__":
-    # This should not be called normally! Just for testing and debugging.
-
-    # Directory of images.
+    """
+    This should not be called normally! Just for testing and debugging.
+    For example, use this to test the coverage code.  For this we should use
+    the same virtualenv as we do for the camera script. Edit: no, getting
+    problems with opencv, just do system python. Pray there are no substantive
+    python 2 vs 3 changes with opencv code, if that issue arises ...
+    """
+    # Directory of images. Just run zivid camera script and copy images into 'tmp'.
     img_paths = sorted(
-            [join('tmp',x) for x in os.listdir('tmp/') if 'c_img' in x and '.png' in x]
+            [join('tmp',x) for x in os.listdir('tmp/') if 'c_img_crop_proc' in x and
+                    '.png' in x and '_56' not in x]
     )
     images = [cv2.imread(x) for x in img_paths]
     img_paths_d = sorted(
-            [join('tmp',x) for x in os.listdir('tmp/') if 'd_img' in x and '.png' in x]
+            [join('tmp',x) for x in os.listdir('tmp/') if 'd_img_crop_proc' in x and
+                    '.png' in x and '_56' not in x]
     )
     images_d = [cv2.imread(x) for x in img_paths_d]
 
@@ -416,16 +445,14 @@ if __name__ == "__main__":
     print('color across all data in directory:')
     _ = print_means(images)
 
-    # Inspect coverage.
     nb_imgs = len(img_paths)
     print('num images: {}'.format(nb_imgs))
 
-    # Ignore if I want to skip.
-    if False:
+    # Test coverage.
+    if True:
         for idx,(img,fname) in enumerate(zip(images,img_paths)):
             coverage = calculate_coverage(img, display=True)
             print('  image {} at {} has coverage {:.2f}'.format(idx, fname, coverage*100))
-
 
     # Daniel NOTE! I was using this for debugging if we wanted to forcibly
     # adjust pixel values to get them in line with the training data.
@@ -484,7 +511,7 @@ if __name__ == "__main__":
             cv2.imwrite(savepath, img)
 
     # Try de-noising.
-    if True:
+    if False:
         print('\n\nTRYING DE-NOISING\n')
         # Depth images are type uint8.
         for idx,(img,fname) in enumerate(zip(images_d,img_paths_d)):

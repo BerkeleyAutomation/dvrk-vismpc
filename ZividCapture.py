@@ -38,7 +38,9 @@ _IY = 840
 _OFFSET = 485
 
 # Pretty simple, whatever the size of the actual image input to the neural net.
-_FINAL_X = 56
+# Update: actually most of the parameters were tuned for 100x100. Just do 100x100
+# and then we can downsize to 56x56 as the very final step?
+_FINAL_X = 100
 _FINAL_Y = _FINAL_X
 # ---------------------------------------------------------------------------- #
 # End of camera configuration values.
@@ -135,7 +137,7 @@ def get_and_process_zc_imgs(zc, head=None, debug=True):
         if debug:
             print(os.listdir(HEAD))
         # Should be similar to the way we compute `start_idx` in `run.py`.
-        num = len([x for x in os.listdir(HEAD) if 'c_img_crop_proc' in x
+        num = len([x for x in os.listdir(HEAD) if 'c_img_crop_proc_56' in x
                 and '.png' in x])
         print('current index we will save is at: {}'.format(num))
         d_img = None
@@ -200,31 +202,39 @@ def get_and_process_zc_imgs(zc, head=None, debug=True):
         c_img_crop_proc = cv2.fastNlMeansDenoisingColored(c_img_crop, None, 7, 7, 7, 21)
         d_img_crop_proc = cv2.fastNlMeansDenoising(d_img_crop, None, 7, 7, 21)
 
+        # Last step! :-) Might make it easier to go back to 100x100.
+        c_img_crop_proc_56 = cv2.resize(c_img_crop_proc, (56,56))
+        d_img_crop_proc_56 = cv2.resize(d_img_crop_proc, (56,56))
+
         # Save so that we can split on the '-' and use first number as an index.
-        c_tail           = "{}-c_img.png".format(str(num).zfill(3))
-        d_tail           = "{}-d_img.png".format(str(num).zfill(3))
-        c_tail_crop      = "{}-c_img_crop.png".format(str(num).zfill(3))
-        d_tail_crop      = "{}-d_img_crop.png".format(str(num).zfill(3))
-        c_tail_crop_proc = "{}-c_img_crop_proc.png".format(str(num).zfill(3))
-        d_tail_crop_proc = "{}-d_img_crop_proc.png".format(str(num).zfill(3))
-        c_imgpath           = join(HEAD, c_tail)
-        d_imgpath           = join(HEAD, d_tail)
-        c_imgpath_crop      = join(HEAD, c_tail_crop)
-        d_imgpath_crop      = join(HEAD, d_tail_crop)
-        c_imgpath_crop_proc = join(HEAD, c_tail_crop_proc)
-        d_imgpath_crop_proc = join(HEAD, d_tail_crop_proc)
-        cv2.imwrite(c_imgpath,           c_img)
-        cv2.imwrite(d_imgpath,           d_img)
-        cv2.imwrite(c_imgpath_crop,      c_img_crop)
-        cv2.imwrite(d_imgpath_crop,      d_img_crop)
-        cv2.imwrite(c_imgpath_crop_proc, c_img_crop_proc)
-        cv2.imwrite(d_imgpath_crop_proc, d_img_crop_proc)
+        c_tail              = "{}-c_img.png".format(str(num).zfill(3))
+        d_tail              = "{}-d_img.png".format(str(num).zfill(3))
+        c_tail_crop         = "{}-c_img_crop.png".format(str(num).zfill(3))
+        d_tail_crop         = "{}-d_img_crop.png".format(str(num).zfill(3))
+        c_tail_crop_proc    = "{}-c_img_crop_proc.png".format(str(num).zfill(3))
+        d_tail_crop_proc    = "{}-d_img_crop_proc.png".format(str(num).zfill(3))
+        c_tail_crop_proc_56 = "{}-c_img_crop_proc_56.png".format(str(num).zfill(3))
+        d_tail_crop_proc_56 = "{}-d_img_crop_proc_56.png".format(str(num).zfill(3))
+        c_imgpath              = join(HEAD, c_tail)
+        d_imgpath              = join(HEAD, d_tail)
+        c_imgpath_crop         = join(HEAD, c_tail_crop)
+        d_imgpath_crop         = join(HEAD, d_tail_crop)
+        c_imgpath_crop_proc    = join(HEAD, c_tail_crop_proc)
+        d_imgpath_crop_proc    = join(HEAD, d_tail_crop_proc)
+        c_imgpath_crop_proc_56 = join(HEAD, c_tail_crop_proc_56)
+        d_imgpath_crop_proc_56 = join(HEAD, d_tail_crop_proc_56)
+        cv2.imwrite(c_imgpath,              c_img)
+        cv2.imwrite(d_imgpath,              d_img)
+        cv2.imwrite(c_imgpath_crop,         c_img_crop)
+        cv2.imwrite(d_imgpath_crop,         d_img_crop)
+        cv2.imwrite(c_imgpath_crop_proc,    c_img_crop_proc)
+        cv2.imwrite(d_imgpath_crop_proc,    d_img_crop_proc)
+        cv2.imwrite(c_imgpath_crop_proc_56, c_img_crop_proc_56)
+        cv2.imwrite(d_imgpath_crop_proc_56, d_img_crop_proc_56)
         print('\n  just saved: {}'.format(c_imgpath))
         print('  just saved: {}'.format(d_imgpath))
-        print('  just saved: {}'.format(c_imgpath_crop))
-        print('  just saved: {}'.format(d_imgpath_crop))
-        print('  just saved: {}'.format(c_imgpath_crop_proc))
-        print('  just saved: {}'.format(d_imgpath_crop_proc))
+        print('  just saved: {}'.format(c_imgpath_crop_proc_56))
+        print('  just saved: {}'.format(d_imgpath_crop_proc_56))
         i += 1
         # Now PROCESSED images are saved, and we should load using neural net code.
         # Alternative way to save if needed:

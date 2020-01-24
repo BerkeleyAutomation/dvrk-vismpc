@@ -245,8 +245,10 @@ if __name__ == '__main__':
         # E.g.: dir_for_imgs/000-c_img_crop_proc.png, dir_for_imgs/000-d_img_crop_proc.png
         # Note that this is one MINUS nb_curr ... that is 1-idx'd.
         time.sleep(1)  # just in case delays happen
-        c_path = join(cfg.DVRK_IMG_PATH, '{}-c_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
-        d_path = join(cfg.DVRK_IMG_PATH, '{}-d_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
+        c_path = join(cfg.DVRK_IMG_PATH,
+                      '{}-c_img_crop_proc_56.png'.format(str(nb_curr-1).zfill(3)))
+        d_path = join(cfg.DVRK_IMG_PATH,
+                      '{}-d_img_crop_proc_56.png'.format(str(nb_curr-1).zfill(3)))
         dvrk_c_img = cv2.imread(c_path)
         dvrk_d_img = cv2.imread(d_path)
         assert dvrk_c_img.shape == dvrk_d_img.shape == raw_img_shape
