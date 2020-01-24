@@ -36,7 +36,10 @@ import utils as U
 
 
 def run(args, p, img_shape, save_path):
-    """Run one episode, record statistics, etc."""
+    """Run one episode, record statistics, etc.
+
+    TODO: record timing?
+    """
     stats = defaultdict(list)
     COVERAGE_SUCCESS = 0.92
     exponent = 0
@@ -47,38 +50,33 @@ def run(args, p, img_shape, save_path):
         print('*************************************\n')
 
         # ----------------------------------------------------------------------
-        # STEP 1: query the image from the camera class using `cam`. To avoid
-        # the flashing strobe light, you have to move to the tab with the camera.
+        # STEP 1: move to the tab with the camera, click ENTER. This will save
+        # images, and also call the neural network code to produce an action.
+        # Then, load the action.
         # ----------------------------------------------------------------------
-        c_img_raw = None
-        d_img_raw = None
-        print('Waiting for c_img, & d_img; please press ENTER in the appropriate tab')
-        while c_img_raw is None:
-            c_img_raw = cam.read_color_data()
-        while d_img_raw is None:
-            d_img_raw = cam.read_depth_data()
-        print('  obtained the (raw) c_img and d_img')
+        results = U.get_net_results()  # Results from the neural network.
+        print('Waiting for one more result to the {} we have so far'.format(len(results)))
+        while len(results) == i:
+            time.sleep(1)
+            results = U.get_net_results()
+        assert len(results) >= i
+        assert len(results) == i+1, '{} vs {}, {}'.format(i, results, len(results))
 
         # ----------------------------------------------------------------------
-        # STEP 2: process image and save as a 100x100 png, see `camera.py` for some
-        # tests. Image must be saved in specified DVRK_IMG_PATH for the net to see.
-        # Also, if coverage is high enough, EXIT NOW!
+        # STEP 2: load those images, using same code as in the network loading
+        # code. If coverage is high enough, exit now.
         # ----------------------------------------------------------------------
-        c_img, d_img = _process_images(c_img_raw, d_img_raw, args)
-        assert c_img.shape == img_shape, c_img.shape
-        assert d_img.shape == img_shape, d_img.shape
-        if args.use_color:
-            c_tail = "c_img_{}.png".format(str(i).zfill(2))
-            img_path = join(C.DVRK_IMG_PATH, c_tail)
-            cv2.imwrite(img_path, c_img)
-        else:
-            d_tail = "d_img_{}.png".format(str(i).zfill(2))
-            img_path = join(C.DVRK_IMG_PATH, d_tail)
-            cv2.imwrite(img_path, d_img)
-        print('just saved to: {}\n'.format(img_path))
+        c_path = join(C.DVRK_IMG_PATH, '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
+        d_path = join(C.DVRK_IMG_PATH, '{}-d_img_crop_proc.png'.format(str(i).zfill(3)))
+        c_img = cv2.imread(c_path)
+        d_img = cv2.imread(d_path)
         U.single_means(c_img, depth=False)
         U.single_means(d_img, depth=True)
+        assert c_img.shape == d_img.shape == img_shape
+        assert args.use_rgbd
+        img = np.dstack( (c_img, d_img[:,:,0]) )
 
+        # NOTE: haven't tuned this yet for newer 56x56 images.
         coverage = U.calculate_coverage(c_img)
 
         # Ensures we save the final image in case we exit and get high coverage.
@@ -97,15 +95,14 @@ def run(args, p, img_shape, save_path):
         time.sleep(5)
 
         # ----------------------------------------------------------------------
-        # STEP 3: get the output from the neural network loading class (you did
-        # run it in a separate terminal tab, right?) and then show it to a human.
-        # HUGE ASSUMPTION: that the last text file indicates the action we want.
+        # STEP 3: show the output of the action to the human. HUGE ASSUMPTION:
+        # that we can just look at the last item of `results` list.
         # ----------------------------------------------------------------------
-        dvrk_action_paths = U.get_net_results()
-        assert len(dvrk_action_paths) > 0, 'Did you run the neural net code??'
-        action = np.loadtxt(dvrk_action_paths[-1])
+        action = np.loadtxt(results[-1])
         print('neural net says: {}'.format(action))
         stats['actions'].append(action)
+
+        sys.exit() #TODO UP TO HERE
 
         # ----------------------------------------------------------------------
         # STEP 3.5, only if we're not on the first action, if current image is
