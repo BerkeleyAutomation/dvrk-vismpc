@@ -4,28 +4,37 @@
 
 with `results` file in the correct path.
 
-NOTES:
+POTENTIALLY OUTDATED (from Fall 2019):
 
-The only episodes which I think have issues with lengths of the lists is tier1,
-color, episode 000, which has duplicate coverage.
+    The only episodes which I think have issues with lengths of the lists is tier1,
+    color, episode 000, which has duplicate coverage.
 
-The number of actions should be one less than the number of images and coverage
-statistics.
+    The number of actions should be one less than the number of images and coverage
+    statistics.
 
-At some point on September 6, I made the episode length 10.
+    At some point on September 6, I made the episode length 10.
 
-Starting September 8 and beyond for the last week:
-  - Follow protocol of starting the cloth, then randomizing which of RGB or
-    depth is applied. Then we recreate the cloth as close as we can, and do the
-    other experiment.
-  - We use the de-noising that Ryan Hoque suggested.
+    Starting September 8 and beyond for the last week:
+      - Follow protocol of starting the cloth, then randomizing which of RGB or
+        depth is applied. Then we recreate the cloth as close as we can, and do the
+        other experiment.
+      - We use the de-noising that Ryan Hoque suggested.
 
-Starting September 9, I'm using a lighter blue cloth, which should more closely
-match what we have in simulation.
+    Starting September 9, I'm using a lighter blue cloth, which should more closely
+    match what we have in simulation.
 
-NOTE: just realized, if doing 9 actions, such as in:
-    results/tier2_color/ep_020_2019-09-13-11-52.pkl
-for some reason it records the coverage twice. Oops! Let's correct for that.
+    NOTE: just realized, if doing 9 actions, such as in:
+        results/tier2_color/ep_020_2019-09-13-11-52.pkl
+    for some reason it records the coverage twice. Oops! Let's correct for that.
+
+For January 2020+:
+
+    Tier 1, episode 000 has 9 actions but 11 images since I saved the last as a
+    duplicate, due to bad logic with my coverage success code.
+
+    The first five DAgger episodes of each tier are with the RGBD-trained
+    policy w/action truncation, and used the naive 'structural similarity'
+    action correction which we should probably adjust ... now?
 """
 import os
 import cv2
@@ -44,7 +53,6 @@ def _criteria(x, MONTH_BEGIN=9, DAY_BEGIN=7):
 
     I started on the 6th but changed the protocol a bit afterwards.
     """
-
     # Get only the pickle file name.
     x = os.path.basename(x)
 
@@ -61,8 +69,8 @@ def _criteria(x, MONTH_BEGIN=9, DAY_BEGIN=7):
         date = (ss[2]).split('-')
         assert len(date) == 5, date
         year, month, day = int(date[0]), int(date[1]), int(date[2])
-        assert year == 2019, year
-        assert month == 9, month
+        assert year == 2020, year
+        assert month == 1, month
         #print(x, date, year, month, day, day >= DAY_BEGIN)
         begin = day >= DAY_BEGIN
         return begin
@@ -155,11 +163,7 @@ def analyze_group(head):
     return _str, num_counted
 
 
-if __name__ == "__main__":
-    #pth = join('results','tier1_color','ep_000.pkl')
-    #analyze_single(pth)
-
-    # Analyze.
+def analyze_icra_submission():
     print('\n*********************************************')
     print('ANALYZING TIER 1 COLOR AND DEPTH ON YELLOW')
     print('*********************************************\n')
@@ -217,3 +221,56 @@ if __name__ == "__main__":
     print('T2 Dep. '+ str4)
     print('T3 RGB  '+ str5)
     print('T3 Dep. '+ str6)
+
+
+if __name__ == "__main__":
+    #pth = join('results','tier1_color','ep_000.pkl')
+    #analyze_single(pth)
+    #analyze_icra_submission()
+
+    print('\n*********************************************')
+    print('ANALYZING TIER 1 DAGGER')
+    print('*********************************************\n')
+    head = join('results', 'tier1_rgbd')
+    str1, nb1 = analyze_group(head)
+
+    #print('\n*********************************************')
+    #print('ANALYZING TIER 1 VF')
+    #print('*********************************************\n')
+    #head = join('results', 'tier1_depth')
+    #str2, nb2 = analyze_group(head)
+
+    print('\n*********************************************')
+    print('ANALYZING TIER 2 COLOR')
+    print('*********************************************\n')
+    head = join('results', 'tier2_rgbd')
+    str3, nb3 = analyze_group(head)
+
+    #print('\n*********************************************')
+    #print('ANALYZING TIER 2 VF')
+    #print('*********************************************\n')
+    #head = join('results', 'tier2_depth')
+    #str4, nb4 = analyze_group(head)
+
+    print('\n*********************************************')
+    print('ANALYZING TIER 3 COLOR')
+    print('*********************************************\n')
+    head = join('results', 'tier3_rgbd')
+    str5, nb5 = analyze_group(head)
+
+    #print('\n*********************************************')
+    #print('ANALYZING TIER 3 VF')
+    #print('*********************************************\n')
+    #head = join('results', 'tier3_depth')
+    #str6, nb6 = analyze_group(head)
+
+    print('\nNumber of trials we record:')
+    #print(nb1, nb2, nb3, nb4, nb5, nb6)
+    print(nb1, nb3, nb5)
+    print('\n\nCopy and paste this for LaTeX:\nstart, end, max, mean')
+    print('T1 RGBD DAgger '+ str1)
+    #print('T1 Dep. '+ str2)
+    print('T2 RGBD DAgger '+ str3)
+    #print('T2 Dep. '+ str4)
+    print('T3 RGBD DAgger '+ str5)
+    #print('T3 Dep. '+ str6)
