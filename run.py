@@ -151,12 +151,14 @@ def run(args, p, img_shape, save_path):
     """Run one episode, record statistics, etc.
     """
     stats = defaultdict(list)
+    # using 15 for vismpc and to be fair, DAgger if we also used 15 ...
+    MAX_EP_LENGTH = 15
     COVERAGE_SUCCESS = 0.92
     SS_THRESH = 0.95
     dumb_correction = False
     freq = 0
 
-    for i in range(args.max_ep_length):
+    for i in range(MAX_EP_LENGTH):
         print('\n*************************************')
         print('ON TIME STEP (I.E., ACTION) NUMBER {}'.format(i+1))
         print('*************************************\n')
@@ -298,9 +300,9 @@ def run(args, p, img_shape, save_path):
 
     # If we ended up using all actions above, we really need one more image.
     # Edit: need to handle case of when we exceeded coverage after 9th action.
-    if len(stats['c_img']) == args.max_ep_length and coverage < COVERAGE_SUCCESS:
-        assert len(stats['coverage']) == args.max_ep_length, len(stats['coverage'])
-        i = args.max_ep_length
+    if len(stats['c_img']) == MAX_EP_LENGTH and coverage < COVERAGE_SUCCESS:
+        assert len(stats['coverage']) == MAX_EP_LENGTH, len(stats['coverage'])
+        i = MAX_EP_LENGTH
 
         # Results from the neural network -- still use to check if we get a NEW image.
         results = U.get_net_results()
@@ -351,7 +353,6 @@ if __name__ == "__main__":
     parser.add_argument('--use_other_color', action='store_true')
     #parser.add_argument('--use_color', type=int) # 1 = True
     parser.add_argument('--tier', type=int)
-    parser.add_argument('--max_ep_length', type=int, default=10)
     args = parser.parse_args()
     assert args.tier is not None
     args.use_rgbd = True
