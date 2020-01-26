@@ -19,6 +19,8 @@ from dvrkClothSim import dvrkClothSim
 #import load_config as cfg
 import config as C
 import utils as U
+import PIL
+from PIL import (Image, ImageDraw)
 
 
 def action_correction(act, freq, c_img_100x100, display=True):
@@ -66,7 +68,7 @@ def action_correction(act, freq, c_img_100x100, display=True):
     ret, thresh = cv2.threshold(imgray, _THRESHOLD, 255, cv2.THRESH_BINARY)
     tot_w = np.sum(thresh >= 255.0)
     tot_b = np.sum(thresh <= 0.0)
-    print('resized c_img, thresh: {}, {}'.format(c_img, thresh.shape)) # should be same
+    print('resized c_img, thresh: {}, {}'.format(c_img.shape, thresh.shape)) # should be same
     print('  white, black pixels: {}, {},  sum {}'.format(tot_w, tot_b, tot_w+tot_b))
 
     # Find out if pick point is on the cloth or not, `thresh` is a numpy array.
@@ -95,10 +97,10 @@ def action_correction(act, freq, c_img_100x100, display=True):
     pix_pick = int(pix_pick[0]), B - int(pix_pick[1])
     pix_targ = int(pix_targ[0]), B - int(pix_targ[1])
     print('pix_pick for opencv: {}'.format(pix_pick))
-    c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=cfg.RED, thickness=-1)
+    c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=C.RED, thickness=-1)
 
     # CENTER OF THE FABRIC. Annoying, tests show we need the reverse, y and then x.
-    c_img = cv2.circle(c_img, center=(avg_y_th,avg_x_th), radius=4, color=cfg.WHITE, thickness=-1)
+    c_img = cv2.circle(c_img, center=(avg_y_th,avg_x_th), radius=4, color=C.WHITE, thickness=-1)
 
     # OK but now we have pixels original, and pixels target. Get vector direction.
     dir_vector = np.array([avg_y_th - pix_pick[0],
@@ -109,7 +111,7 @@ def action_correction(act, freq, c_img_100x100, display=True):
     print('      magnitude:  {:.1f}'.format(Mag))
     print('      normalized: {}'.format(dir_norm))
     print('      interpreted as direction we should adjust pick point')
-    c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
+    c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=C.BLACK, thickness=1)
 
     # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
     # The old pick point was at (act[0], act[1]). Also, in the actual code, if
@@ -126,15 +128,14 @@ def action_correction(act, freq, c_img_100x100, display=True):
                int(B - (new_pick[1]*XX + XX)))
     print('      old pick pt: {}'.format((act[0],act[1])))
     print('      new pick pt: {}'.format(new_pick))
-    c_img = cv2.circle(c_img, center=pix_new, radius=4, color=cfg.BLUE, thickness=-1)
+    c_img = cv2.circle(c_img, center=pix_new, radius=4, color=C.BLUE, thickness=-1)
 
     if display:
         # Display a bunch of images for debugging.
-        display_img = Image.new(mode='RGB', size=(400,200), color=200)
+        display_img = Image.new(mode='RGB', size=(300,200), color=200)
         draw = ImageDraw.Draw(display_img)
         display_img.paste(PIL.Image.fromarray(c_img),      (  0, 0)) # resized + annotated
         display_img.paste(PIL.Image.fromarray(thresh),     (100, 0)) # detect cloth
-        display_img.paste(PIL.Image.fromarray(fake_image), (200, 0)) # detect coverage
         display_img.paste(PIL.Image.fromarray(c_img_orig), (  0, 100)) # original
         coverage = 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
         cv2.imshow("coverage: {:.3f}".format(coverage), np.array(display_img) )
