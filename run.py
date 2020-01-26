@@ -21,61 +21,138 @@ import config as C
 import utils as U
 
 
-def action_correction(a, freq, c_img_100x100):
+def action_correction(act, freq, c_img_100x100, display=True):
     """Action correction if we just barely miss the cloth.
 
     Should only be called if we trigger a structural similiarity check between
-    two consecutive images.
-    """
-    # Gives us the action in pixels. NOTE THE 100x100 ASSUMPTIUN.
-    assert c_img_100x100.shape == (100,100,3)
-    coord_min = 0
-    coord_max = 100
+    two consecutive images. Here's how this works:
 
-    # Convert from (-1,1) to the image pixels.
-    XX = 100
+    (1) Crop the 100x100 image to only consider the foam rubber. We do this
+    even if we have 56x56 images as much of the coverage code is heavily tuned
+    towards 100x100-sized images.
+
+    (2) Measure pixels of the cloth, thresholded.
+
+    (3) Measure the center of that cloth region.
+
+    (4) The 'direction vector' goes from the pick point to that cloth center.
+
+    (5) Adjust the pick point based on the direction vector, and multiply by
+    freq, so that we go further if needed. The deltas in x and y are the same.
+
+    To make this better we could better tune the distance to travel.
+    """
+    print('\nWe are correcting for action: {}, freq {}'.format(act, freq))
+    assert c_img_100x100.shape == (100,100,3)
+    c_img_orig = c_img_100x100.copy()
+    bounding_dims = (10,90,10,90)  # copy whatever's in `utils.py`
+    min_x, max_x, min_y, max_y = bounding_dims
+    c_img = c_img_orig[min_x:max_x,min_y:max_y,:]
+    CHANGE_CONST = 5
+    _THRESHOLD = 100
+
+    # Convert from action space to pixels (with some caveats). Ah, with B we may
+    # get a B-sized list but with index at B, so do -1?
+    B = c_img.shape[0] - 1
+    XX = B / 2
     pix_pick = (act[0] * XX + XX,
                 act[1] * XX + XX)
     pix_targ = ((act[0]+act[2]) * XX + XX,
                 (act[1]+act[3]) * XX + XX)
 
-    # Find the closest image pixels of the substrate.
-    close_pix = (c0, c1)
-    close_pick = ((c0[0] - XX) / XX,
-                  (c1[1] - XX) / XX)
+    # thresh is grayscale image. Should be 255 for white values, right?
+    # Since the cloth is BLACK we want to check if thresh[pick_point] is 0.
+    imgray = cv2.cvtColor(c_img, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(imgray, _THRESHOLD, 255, cv2.THRESH_BINARY)
+    tot_w = np.sum(thresh >= 255.0)
+    tot_b = np.sum(thresh <= 0.0)
+    print('resized c_img, thresh: {}, {}'.format(c_img, thresh.shape)) # should be same
+    print('  white, black pixels: {}, {},  sum {}'.format(tot_w, tot_b, tot_w+tot_b))
 
-    # Then compute a direction for the pix_pick which will be more likely to touch it.
-    # direction from pix_pick --> close_pick
+    # Find out if pick point is on the cloth or not, `thresh` is a numpy array.
+    # Ah, it can be inaccurate due to boundary conditions? Not sure how to easily fix.
+    x, y = int(pix_pick[0]), int(pix_pick[1])
+    if (thresh[B-y, x] <= 0.0):
+        # Tricky, not sure the best way, we may just want to keep going but change
+        # the delta magnitudes so they're smaller?
+        print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x, y, _THRESHOLD))
+        print('  WARNING: CODE THINKS PICK POINT IS ON THE CLOTH!')
+        on_cloth = True
+    else:
+        print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-x, y, _THRESHOLD))
+        on_cloth = False
 
-    # Heuristics, want to avoid moving towards the edge, right?
+    # some more threshold stuff, find the center pixel?
+    # I know it has some of the boundary stuff, but part of that is unavoidable imo.
+    cloth_indices = np.argwhere(thresh < 0.1)
+    avg_xy = np.mean(cloth_indices, axis=0)
+    print('  avg pixels of threshold: {:.1f},{:.1f} from np mean {}'.format(
+            avg_xy[0], avg_xy[1], avg_xy.shape))
+    avg_x_th = int(avg_xy[0])
+    avg_y_th = int(avg_xy[1])
 
-    ## For image annotation we probably can just restrict to intervals. Also
-    ## convert to integers for drawing.
-    #pix_pick = ( int(max(min(pix_pick[0],coord_max),coord_min)),
-    #             int(max(min(pix_pick[1],coord_max),coord_min)) )
-    #pix_targ = ( int(max(min(pix_targ[0],coord_max),coord_min)),
-    #             int(max(min(pix_targ[1],coord_max),coord_min)) )
-    ## Now we annotate, save the image, and return pixels after all this.
-    #assert img_file is not None
-    #cv2.circle(img, center=pix_pick, radius=5, color=cfg.BLUE, thickness=1)
-    #cv2.circle(img, center=pix_targ, radius=3, color=cfg.RED, thickness=1)
-    #fname = img_file
-    #cv2.imwrite(filename=fname, img=img)
+    # Annotate with 'opencv y', SO MUST INVERT for visualizing pick points.
+    pix_pick = int(pix_pick[0]), B - int(pix_pick[1])
+    pix_targ = int(pix_targ[0]), B - int(pix_targ[1])
+    print('pix_pick for opencv: {}'.format(pix_pick))
+    c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=cfg.RED, thickness=-1)
 
-    new_act = np.array( [a[0], a[1], a[2], a[3]] )
-    print('our new corrected action: {}, freq {}'.format(new_act, freq))
+    # CENTER OF THE FABRIC. Annoying, tests show we need the reverse, y and then x.
+    c_img = cv2.circle(c_img, center=(avg_y_th,avg_x_th), radius=4, color=cfg.WHITE, thickness=-1)
+
+    # OK but now we have pixels original, and pixels target. Get vector direction.
+    dir_vector = np.array([avg_y_th - pix_pick[0],
+                           pix_pick[1] - avg_x_th])  # yeah yeah we have to subtract
+    Mag = np.linalg.norm(dir_vector)
+    dir_norm = dir_vector / Mag
+    print('vector direction: {}'.format(dir_vector))
+    print('      magnitude:  {:.1f}'.format(Mag))
+    print('      normalized: {}'.format(dir_norm))
+    print('      interpreted as direction we should adjust pick point')
+    c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
+
+    # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
+    # The old pick point was at (act[0], act[1]). Also, in the actual code, if
+    # we call this many times consecutively, MULTIPLY `change_{x,y}` by `freq`.
+    change_x = (dir_norm[0] / CHANGE_CONST) * freq
+    change_y = (dir_norm[1] / CHANGE_CONST) * freq
+    if on_cloth:
+        change_x /= 2.0
+        change_y /= 2.0
+    print('      change actx space: {:.2f}'.format(change_x))
+    print('      change acty space: {:.2f}'.format(change_x))
+    new_pick = (act[0]+change_x, act[1]+change_y)
+    pix_new = (int(new_pick[0]*XX + XX),
+               int(B - (new_pick[1]*XX + XX)))
+    print('      old pick pt: {}'.format((act[0],act[1])))
+    print('      new pick pt: {}'.format(new_pick))
+    c_img = cv2.circle(c_img, center=pix_new, radius=4, color=cfg.BLUE, thickness=-1)
+
+    if display:
+        # Display a bunch of images for debugging.
+        display_img = Image.new(mode='RGB', size=(400,200), color=200)
+        draw = ImageDraw.Draw(display_img)
+        display_img.paste(PIL.Image.fromarray(c_img),      (  0, 0)) # resized + annotated
+        display_img.paste(PIL.Image.fromarray(thresh),     (100, 0)) # detect cloth
+        display_img.paste(PIL.Image.fromarray(fake_image), (200, 0)) # detect coverage
+        display_img.paste(PIL.Image.fromarray(c_img_orig), (  0, 100)) # original
+        coverage = 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
+        cv2.imshow("coverage: {:.3f}".format(coverage), np.array(display_img) )
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    new_act = np.array( [new_pick[0], new_pick[1], act[2], act[3]] )
+    print('our new corrected action: {} w/freq {}'.format(new_act, freq))
     return new_act
 
 
 def run(args, p, img_shape, save_path):
     """Run one episode, record statistics, etc.
-
-    TODO: record timing?
     """
     stats = defaultdict(list)
     COVERAGE_SUCCESS = 0.92
     SS_THRESH = 0.95
-    dumb_correction = True
+    dumb_correction = False
     freq = 0
 
     for i in range(args.max_ep_length):

@@ -227,7 +227,7 @@ def calculate_coverage(c_img, bounding_dims=(10,91,10,91), rgb_cutoff=90, displa
     return coverage
 
 
-def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display=False,
+def test_action_mapping(c_img, bounding_dims=(10,90,10,90), rgb_cutoff=90, display=False,
         act=None):
     """
     Similar to coverage code, but now test if we can map an action to the closest
@@ -242,6 +242,9 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
             image, contours, hierarchy
     so it returns three values. See also:
     https://www.pyimagesearch.com/2014/04/21/building-pokedex-python-finding-game-boy-screen-step-4-6/#comment-378667
+
+    For general comments on how the procedure works, see the action correction
+    method in `run.py`.
     """
     # Convert from (-1,1) to the image pixels. Edit: well if we annotate these in opencv,
     # we have to invert the y, so basically we do 100-y for the image annotations. But
@@ -254,8 +257,9 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     c_img = c_img[min_x:max_x,min_y:max_y,:]
     print('resized c_img: {}'.format(c_img.shape))
 
-    # Convert from action space to pixels (with some caveats).
-    B = c_img.shape[0]
+    # Convert from action space to pixels (with some caveats). Ah, with B we may
+    # get a B-sized list but with index at B, so do -1?
+    B = c_img.shape[0] - 1
     XX = B / 2
     pix_pick = (act[0] * XX + XX,
                 act[1] * XX + XX)
@@ -281,8 +285,9 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     print('  white, black pixels: {}, {},  sum {}'.format(tot_w, tot_b, tot_w+tot_b))
 
     # Find out if pick point is on the cloth or not, `thresh` is a numpy array.
+    # Ah, it can be inaccurate due to boundary conditions? Not sure how to easily fix.
     x, y = int(pix_pick[0]), int(pix_pick[1])
-    if thresh[B-y, x] <= 0.0:
+    if (thresh[B-y, x] <= 0.0):
         print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
         print('  (we do not need to do any re-mapping)')
     else:
@@ -325,7 +330,8 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
 
     # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
-    # The old pick point was at (act[0], act[1]).
+    # The old pick point was at (act[0], act[1]). Also, in the actual code, if
+    # we called this many times, just multiply change_{x,y} by freq.
     CHANGE_CONST = 5
     change_x = dir_norm[0] / CHANGE_CONST
     change_y = dir_norm[1] / CHANGE_CONST
@@ -584,9 +590,13 @@ if __name__ == "__main__":
             coverage = calculate_coverage(img, display=True)
             print('  image {} at {} has coverage {:.2f}'.format(idx, fname, coverage*100))
 
-    # Test action mapping.
+    # Test action mapping. Just with `python utils.py`. Only pick point matters.
     if True:
-        act = [-0.40, -0.60, 0.5, 0.5]
+        #act = [-0.90, -0.90, 0.5, 0.5] # passes
+        #act = [0.90, -0.90, 0.5, 0.5] # passes
+        #act = [-0.90, 0.90, 0.5, 0.5] # passes
+        #act = [0.90, 0.90, 0.5, 0.5] # passes
+        act = [0.0, 0.0, 0.5, 0.5] # passes
         for idx,(img,fname) in enumerate(zip(images,img_paths)):
             coverage = test_action_mapping(img, display=True, act=act)
             print('  image {} at {} has coverage {:.2f}'.format(idx, fname, coverage*100))
