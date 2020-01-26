@@ -136,8 +136,8 @@ def action_correction(act, freq, c_img_100x100, display=True):
         display_img.paste(PIL.Image.fromarray(c_img),      (  0, 0)) # resized + annotated
         display_img.paste(PIL.Image.fromarray(thresh),     (100, 0)) # detect cloth
         display_img.paste(PIL.Image.fromarray(c_img_orig), (  0, 100)) # original
-        coverage = 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
-        cv2.imshow("coverage: {:.3f}".format(coverage), np.array(display_img) )
+        cv2.imshow("change_x, y: {:.2f}, {:.2f}".format(change_x,change_y),
+                   np.array(display_img) )
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
