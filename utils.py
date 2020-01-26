@@ -15,6 +15,8 @@ from os.path import join
 import datetime
 sys.path.append('call_network')
 import load_config as cfg
+import PIL
+from PIL import (Image, ImageDraw)
 
 
 # Useful constants.
@@ -206,8 +208,6 @@ def calculate_coverage(c_img, bounding_dims=(10,91,10,91), rgb_cutoff=90, displa
     fake_image = np.array(is_not_covered * 255, dtype = np.uint8)
 
     # Display a bunch of images for debugging
-    import PIL
-    from PIL import (Image, ImageDraw)
     display_img = Image.new(mode='L', size=(300,300), color=200)
     draw = ImageDraw.Draw(display_img)
     display_img.paste(PIL.Image.fromarray(c_img), (0, 0))
@@ -243,10 +243,9 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     so it returns three values. See also:
     https://www.pyimagesearch.com/2014/04/21/building-pokedex-python-finding-game-boy-screen-step-4-6/#comment-378667
     """
-    # Convert from (-1,1) to the image pixels.
-    # Edit: well if we annotate these in opencv, we have to invert the y, so
-    # basically we do 100-y for the image annotations. But for numpy we still
-    # use the standard y.
+    # Convert from (-1,1) to the image pixels. Edit: well if we annotate these in opencv,
+    # we have to invert the y, so basically we do 100-y for the image annotations. But
+    # for numpy we still use the standard y.
     print('\nDebugging, act: {}'.format(act))
 
     assert c_img.shape == (100,100,3)
@@ -275,23 +274,6 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     fake_image = np.array(is_not_covered * 255, dtype = np.uint8)
 
 
-    # Hmm ... would be a lot easier if we could just detect the blue stuff.
-    # define the list of boundaries (edit: not working so well...).
-    boundaries = [
-        ([17, 15, 100], [50, 56, 200]),
-        ([86, 31, 4], [220, 88, 50]),
-        ([25, 146, 190], [62, 174, 250]),
-        ([103, 86, 65], [145, 133, 128])
-    ]
-    lower, upper = boundaries[1]
-    lower = np.array(lower, dtype = "uint8")
-    upper = np.array(upper, dtype = "uint8")
-    # find the colors within the specified boundaries and apply the mask
-    img = c_img.copy()
-    mask = cv2.inRange(img, lower, upper)
-    output = cv2.bitwise_and(img, img, mask=mask)
-
-
     # Contour?
     imgray = cv2.cvtColor(c_img, cv2.COLOR_BGR2GRAY)
     # Hmm ... I'm seeing 100 as a better threshold than the rgb_cutoff=90?
@@ -304,10 +286,6 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     print('thresh: size {}'.format(thresh.shape))
     print('  white, black pixels: {}, {},  sum {}'.format(tot_w, tot_b, tot_w+tot_b))
 
-    # Eh not that useful for us.
-    edged = cv2.Canny(imgray, 30, 200)
-    edged_thresh = cv2.Canny(thresh, 30, 200)
-
     # Find out if pick point is on the cloth or not, `thresh` is a numpy array.
     x, y = int(pix_pick[0]), int(pix_pick[1])
     if thresh[XXX-y, x] <= 0.0:
@@ -319,86 +297,57 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     print('  thresh[{},{}]:   {:.1f}'.format(XXX-x, y,     thresh[XXX-x,y]))
     print('  thresh[{},{}]:   {:.1f}'.format(XXX-x, XXX-y, thresh[XXX-x,XXX-y]))
 
-    # find contours
-    #contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    (_, contours, _) = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    print('found contours, length {}'.format(len(contours)))
 
-    # prune contour points on the edges of the bed
-    #for i in range(len(contours)):
-    #    contour = contours[i]
-    #    remove = []
-    #    for j in range(len(contour)):
-    #        _x = contour[j][0][0]
-    #        _y = contour[j][0][1]
-    #        # allow ~3 pixels of wiggle room
-    #        if _x in (23, 24, 25, 26, 27) or _x in (173, 174, 175, 176, 177) or _y in (23, 24, 25, 26, 27) or _y in (173, 174, 175, 176, 177):
-    #            remove.append(j)
-    #    contours[i] = np.delete(contour, remove, 0)
-    ## set new x,y slightly past (~5 pixels) the closest contour point
-    #nearest_x, nearest_y, nearest_dist = 0, 0, 200
-    #for contour in contours:
-    #    for point in contour:
-    #        _x = point[0][0]
-    #        _y = point[0][1]
-    #        dist = ((_x - x)** 2 + (_y - y)** 2)** 0.5
-    #        if dist < nearest_dist:
-    #            nearest_dist = dist
-    #            nearest_x = _x
-    #            nearest_y = _y
-    #angle = np.arctan(abs(y - nearest_y) / abs(x - nearest_x))
-    #extra_x = 5 * np.cos(angle)
-    #extra_y = 5 * np.sin(angle)
-    #if nearest_x < x:
-    #    new_x = int(nearest_x - extra_x)
-    #else:
-    #    new_x = int(nearest_x + extra_x)
-    #if nearest_y < y:
-    #    new_y = int(nearest_y - extra_y)
-    #else:
-    #    new_y = int(nearest_y + extra_y)
+    # some more threshold stuff, find the center pixel?
+    # I know it has some of the boundary stuff, but part of that is unavoidable imo.
+    cloth_indices = np.argwhere(thresh < 0.1)
+    print('thresh.shape: {}, tot {}'.format(thresh.shape, np.prod(thresh.shape)))
+    print('cloth_indices: {}'.format(cloth_indices.shape))
+    avg_xy = np.mean(cloth_indices, axis=0)
+    print('  avg pixels of threshold: {:.1f},{:.1f} from np mean {}'.format(
+            avg_xy[0], avg_xy[1], avg_xy.shape))
+    avg_x_th = int(avg_xy[0])
+    avg_y_th = int(avg_xy[1])
 
-    # Visualize contours.
-    c_img_cont = c_img.copy()
-    #for contour in contours:
-    #  cv2.drawContours(c_img_cont, contour, -1, (0, 255, 0), 3)
-    #cv2.circle(obs, (x, y), 5, (0, 0, 255), 2)
-    #cv2.circle(obs, (new_x, new_y), 5, (0, 255, 0), 2)
-    #cv2.imshow("image", obs)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
 
     # Annotate with 'opencv y', SO MUST INVERT for visualizing pick points.
     pix_pick = int(pix_pick[0]), XXX - int(pix_pick[1])
     pix_targ = int(pix_targ[0]), XXX - int(pix_targ[1])
     print('pix_pick for opencv: {}'.format(pix_pick))
-    c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=cfg.GREEN, thickness=1)
+    c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=cfg.RED, thickness=-1)
     #c_img = cv2.circle(c_img, center=pix_targ, radius=4, color=cfg.BLUE, thickness=1)
-    c_img = cv2.circle(c_img, center=(58,16), radius=4, color=cfg.BLUE, thickness=1)
-    c_img = cv2.circle(c_img, center=(24,16), radius=4, color=cfg.RED, thickness=1)
-    c_img = cv2.circle(c_img, center=(58,66), radius=4, color=(255,255,255), thickness=1)
+    #c_img = cv2.circle(c_img, center=(58,16), radius=4, color=cfg.BLUE, thickness=1)
+    #c_img = cv2.circle(c_img, center=(24,16), radius=4, color=cfg.RED, thickness=1)
+    #c_img = cv2.circle(c_img, center=(58,66), radius=4, color=cfg.WHITE, thickness=1)
+
+    # Let's draw this for seeing pixels of the center of the fabric.
+    # Yeah annoying my tests show we need the reverse, y and then x.
+    c_img = cv2.circle(c_img, center=(avg_y_th,avg_x_th), radius=4, color=cfg.WHITE, thickness=-1)
+
+    # OK but now we have pixels original, and pixels target. Get vector direction.
+    dir_vector = np.array([avg_y_th - pix_pick[0],
+                           pix_pick[1] - avg_x_th])  # yeah yeah we have to subtract
+    Mag = np.linalg.norm(dir_vector)
+    dir_norm = dir_vector / Mag
+    print('vector direction: {}'.format(dir_vector))
+    print('      magnitude:  {}'.format(Mag))
+    print('      normalized: {}'.format(dir_norm))
+    print('      interpreted as direction we should adjust pick point')
+    c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
 
     # Display a bunch of images for debugging
     # These go from right to left, generally.
-    import PIL
-    from PIL import (Image, ImageDraw)
-    display_img = Image.new(mode='RGB', size=(700,200), color=200)
+    display_img = Image.new(mode='RGB', size=(500,200), color=200)
     draw = ImageDraw.Draw(display_img)
     display_img.paste(PIL.Image.fromarray(c_img),      (  0, 0)) # original image w/annotations
     display_img.paste(PIL.Image.fromarray(thresh),     (100, 0)) # tried detecting cloth
     display_img.paste(PIL.Image.fromarray(fake_image), (200, 0)) # for coverage detection
-    display_img.paste(PIL.Image.fromarray(edged),      (300, 0)) # eh not that useful
-    display_img.paste(PIL.Image.fromarray(edged_thresh),(400, 0)) # eh not that useful
-    display_img.paste(PIL.Image.fromarray(output),     (500, 0)) # color detection
     display_img.paste(PIL.Image.fromarray(c_img_orig), (  0, 100)) # if resizing, original
-    display_img.paste(PIL.Image.fromarray(c_img_cont), (  0, 200)) # contours?
 
     coverage = 1.0 - (np.sum(is_not_covered) / float(is_not_covered.size))
 
     if display:
         cv2.imshow("coverage: {:.3f}".format(coverage), np.array(display_img) )
-        #cv2.imshow("1", substrate)
-        #cv2.imshow("2", fake_image)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 

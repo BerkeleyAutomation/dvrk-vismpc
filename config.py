@@ -18,6 +18,8 @@ import utils as U
 BLUE  = (255,0,0)
 GREEN = (0,255,0)
 RED   = (0,0,255)
+WHITE = (255,255,255)
+BLACK = (0,0,0)
 
 # ---------------------------------------------------------------------------- #
 # WHERE DVRK CODE SAVES IMAGES -- must be same as in: image_manip/load_config.py
