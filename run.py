@@ -131,7 +131,6 @@ def action_correction(act, freq, c_img_100x100, display=True):
     c_img = cv2.circle(c_img, center=pix_new, radius=4, color=C.BLUE, thickness=-1)
 
     if display:
-        # Display a bunch of images for debugging.
         display_img = Image.new(mode='RGB', size=(300,200), color=200)
         draw = ImageDraw.Draw(display_img)
         display_img.paste(PIL.Image.fromarray(c_img),      (  0, 0)) # resized + annotated
