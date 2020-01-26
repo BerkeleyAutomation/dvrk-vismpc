@@ -246,8 +246,7 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     # Convert from (-1,1) to the image pixels. Edit: well if we annotate these in opencv,
     # we have to invert the y, so basically we do 100-y for the image annotations. But
     # for numpy we still use the standard y.
-    print('\nDebugging, act: {}'.format(act))
-
+    print('\nDebugging the \'re-mapping\', act: {}'.format(act))
     assert c_img.shape == (100,100,3)
     c_img_orig = c_img.copy()
 
@@ -255,16 +254,13 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     c_img = c_img[min_x:max_x,min_y:max_y,:]
     print('resized c_img: {}'.format(c_img.shape))
 
-    XXX = c_img.shape[0]
-    XX = XXX / 2
+    # Convert from action space to pixels (with some caveats).
+    B = c_img.shape[0]
+    XX = B / 2
     pix_pick = (act[0] * XX + XX,
                 act[1] * XX + XX)
     pix_targ = ((act[0]+act[2]) * XX + XX,
                 (act[1]+act[3]) * XX + XX)
-    # Find the closest image pixels of the substrate.
-    #close_pix = (c0, c1)
-    #close_pick = ((c0[0] - XX) / XX,
-    #              (c1[1] - XX) / XX)
 
     min_x, max_x, min_y, max_y = bounding_dims
     #substrate = c_img[min_x:max_x,min_y:max_y,:]
@@ -273,8 +269,6 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
         substrate[:,:,1] > rgb_cutoff), substrate[:,:,2] > rgb_cutoff)
     fake_image = np.array(is_not_covered * 255, dtype = np.uint8)
 
-
-    # Contour?
     imgray = cv2.cvtColor(c_img, cv2.COLOR_BGR2GRAY)
     # Hmm ... I'm seeing 100 as a better threshold than the rgb_cutoff=90?
     # thresh is a grayscale image. Should be 255 for white values, right?
@@ -288,40 +282,35 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
 
     # Find out if pick point is on the cloth or not, `thresh` is a numpy array.
     x, y = int(pix_pick[0]), int(pix_pick[1])
-    if thresh[XXX-y, x] <= 0.0:
-        print('ON the cloth, arr[{},{}], thresh: {}'.format(x,y,_threshold))
+    if thresh[B-y, x] <= 0.0:
+        print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
+        print('  (we do not need to do any re-mapping)')
     else:
-        print('NOT on the cloth, arr[{},{}], thresh: {}'.format(x,y,_threshold))
-    print('  thresh[{},{}]:   {:.1f}'.format(x, y,         thresh[x,y]))
-    print('  thresh[{},{}]:   {:.1f}'.format(x, XXX-y,     thresh[x,XXX-y]))
-    print('  thresh[{},{}]:   {:.1f}'.format(XXX-x, y,     thresh[XXX-x,y]))
-    print('  thresh[{},{}]:   {:.1f}'.format(XXX-x, XXX-y, thresh[XXX-x,XXX-y]))
-
+        print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
+        print('  (should map action towards the cloth, ideally)')
+    #print('  thresh[{},{}]:   {:.1f}'.format(x, y,         thresh[x,y]))
+    #print('  thresh[{},{}]:   {:.1f}'.format(x, B-y,     thresh[x,B-y]))
+    #print('  thresh[{},{}]:   {:.1f}'.format(B-x, y,     thresh[B-x,y]))
+    #print('  thresh[{},{}]:   {:.1f}'.format(B-x, B-y, thresh[B-x,B-y]))
 
     # some more threshold stuff, find the center pixel?
     # I know it has some of the boundary stuff, but part of that is unavoidable imo.
     cloth_indices = np.argwhere(thresh < 0.1)
-    print('thresh.shape: {}, tot {}'.format(thresh.shape, np.prod(thresh.shape)))
-    print('cloth_indices: {}'.format(cloth_indices.shape))
+    #print('thresh.shape: {}, tot {}'.format(thresh.shape, np.prod(thresh.shape)))
+    #print('cloth_indices: {}'.format(cloth_indices.shape))
     avg_xy = np.mean(cloth_indices, axis=0)
     print('  avg pixels of threshold: {:.1f},{:.1f} from np mean {}'.format(
             avg_xy[0], avg_xy[1], avg_xy.shape))
     avg_x_th = int(avg_xy[0])
     avg_y_th = int(avg_xy[1])
 
-
     # Annotate with 'opencv y', SO MUST INVERT for visualizing pick points.
-    pix_pick = int(pix_pick[0]), XXX - int(pix_pick[1])
-    pix_targ = int(pix_targ[0]), XXX - int(pix_targ[1])
+    pix_pick = int(pix_pick[0]), B - int(pix_pick[1])
+    pix_targ = int(pix_targ[0]), B - int(pix_targ[1])
     print('pix_pick for opencv: {}'.format(pix_pick))
     c_img = cv2.circle(c_img, center=pix_pick, radius=4, color=cfg.RED, thickness=-1)
-    #c_img = cv2.circle(c_img, center=pix_targ, radius=4, color=cfg.BLUE, thickness=1)
-    #c_img = cv2.circle(c_img, center=(58,16), radius=4, color=cfg.BLUE, thickness=1)
-    #c_img = cv2.circle(c_img, center=(24,16), radius=4, color=cfg.RED, thickness=1)
-    #c_img = cv2.circle(c_img, center=(58,66), radius=4, color=cfg.WHITE, thickness=1)
 
-    # Let's draw this for seeing pixels of the center of the fabric.
-    # Yeah annoying my tests show we need the reverse, y and then x.
+    # CENTER OF THE FABRIC. Annoying, tests show we need the reverse, y and then x.
     c_img = cv2.circle(c_img, center=(avg_y_th,avg_x_th), radius=4, color=cfg.WHITE, thickness=-1)
 
     # OK but now we have pixels original, and pixels target. Get vector direction.
@@ -330,10 +319,24 @@ def test_action_mapping(c_img, bounding_dims=(9,91,9,91), rgb_cutoff=90, display
     Mag = np.linalg.norm(dir_vector)
     dir_norm = dir_vector / Mag
     print('vector direction: {}'.format(dir_vector))
-    print('      magnitude:  {}'.format(Mag))
+    print('      magnitude:  {:.1f}'.format(Mag))
     print('      normalized: {}'.format(dir_norm))
     print('      interpreted as direction we should adjust pick point')
     c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
+
+    # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
+    # The old pick point was at (act[0], act[1]).
+    CHANGE_CONST = 5
+    change_x = dir_norm[0] / CHANGE_CONST
+    change_y = dir_norm[1] / CHANGE_CONST
+    print('      change actx space: {:.2f}'.format(change_x))
+    print('      change acty space: {:.2f}'.format(change_x))
+    new_pick = (act[0]+change_x, act[1]+change_y)
+    pix_new = (int(new_pick[0]*XX + XX),
+               int(B - (new_pick[1]*XX + XX)))  # just do 100 - x.
+    print('      old pick pt: {}'.format((act[0],act[1])))
+    print('      new pick pt: {}'.format(new_pick))
+    c_img = cv2.circle(c_img, center=pix_new, radius=4, color=cfg.BLUE, thickness=-1)
 
     # Display a bunch of images for debugging
     # These go from right to left, generally.
