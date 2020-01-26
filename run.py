@@ -50,7 +50,7 @@ def action_correction(act, freq, c_img_100x100, display=True):
     bounding_dims = (10,90,10,90)  # copy whatever's in `utils.py`
     min_x, max_x, min_y, max_y = bounding_dims
     c_img = c_img_orig[min_x:max_x,min_y:max_y,:]
-    CHANGE_CONST = 5
+    CHANGE_CONST = 4
     _THRESHOLD = 100
 
     # Convert from action space to pixels (with some caveats). Ah, with B we may
@@ -116,6 +116,7 @@ def action_correction(act, freq, c_img_100x100, display=True):
     # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
     # The old pick point was at (act[0], act[1]). Also, in the actual code, if
     # we call this many times consecutively, MULTIPLY `change_{x,y}` by `freq`.
+    # To make change larger, decrease CHANGE_CONST.
     change_x = (dir_norm[0] / CHANGE_CONST) * freq
     change_y = (dir_norm[1] / CHANGE_CONST) * freq
     if on_cloth:
@@ -126,8 +127,8 @@ def action_correction(act, freq, c_img_100x100, display=True):
     new_pick = (act[0]+change_x, act[1]+change_y)
     pix_new = (int(new_pick[0]*XX + XX),
                int(B - (new_pick[1]*XX + XX)))
-    print('      old pick pt: {}'.format((act[0],act[1])))
-    print('      new pick pt: {}'.format(new_pick))
+    print('      old pick pt: {:.2f},{:.2f}'.format(act[0], act[1]))
+    print('      new pick pt: {:.2f},{:.2f}'.format(new_pick[0], new_pick[1]))
     c_img = cv2.circle(c_img, center=pix_new, radius=4, color=C.BLUE, thickness=-1)
 
     if display:
