@@ -123,4 +123,69 @@ pre-computed `targ_pos` and `targ_rot`.
 
 
 
+## Using DGX and Docker for SV2P
+
+This will be a bit hacky but we can do it. Make sure I start up the camera
+script and the run script. Do NOT run the network loading script.
+
+On the DGX:
+
+```
+nvidia-docker run --runtime=nvidia -it -e NVIDIA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 --rm -v /raid/for-daniel/:/data saved-visual-cuda10-ashwin bash
+```
+
+This will start something Docker-related based on Ashwin's CUDA 10 "image"
+(i.e., "recipe") where containers are *instances* of an image.
+
+Activate the virtualenv:
+
+```
+source /data/envs/visual/bin/activate
+```
+
+Run something like this (assuming GPU 5 is available, check with `nvidia-smi`):
+
+```
+(visual) root@23db4c61657c:/data/cloth-visual-mpc# CUDA_VISIBLE_DEVICES=5 python vismpc/scripts/dvrk.py
+```
+
+It takes a few seconds to start up. Eventually, this will run continuously like
+my other script that works locally here (`call_network/load_net.py`).
+
+On the local surgical robot machine, make sure we keep scp'ing BOTH the color
+and depth images. In addition I have to ensure that I am scp-ing the *latest
+version* of them, in numerical order, and that I an scp-ing the *latest action*
+correctly. This means a cycle that starts off with these commands. First, after
+getting the camera images, do this:
+
+```
+scp dir_for_imgs/000-* seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/
+```
+
+then on the DGX, it will load SV2P and run MPC. It will save an action, indexed
+at one number next. Get this back from the DGX:
+
+```
+scp seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/*_001.txt dir_for_imgs/
+```
+
+(and putting it in the same directory as images).  Then let the robot run, and
+once it's done, get the next camera images, and scp with the next index:
+
+```
+scp dir_for_imgs/001-* seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/
+```
+
+then after MPC:
+
+```
+scp seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/*_002.txt dir_for_imgs/
+```
+
+and so on!
+
+I modified Ryan's script so that it looks at `/data/dir_for_images/` which is
+where `/raid/for-daniel` goes.
+
+
 [1]:https://github.com/BerkeleyAutomation/dvrk_python
