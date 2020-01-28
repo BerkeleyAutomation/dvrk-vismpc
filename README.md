@@ -125,8 +125,21 @@ pre-computed `targ_pos` and `targ_rot`.
 
 ## Using DGX and Docker for SV2P
 
-This will be a bit hacky but we can do it. Make sure I start up the camera
-script and the run script. Do NOT run the network loading script.
+This will be a bit hacky but we can do it. Here's what I do *for each episode*.
+
+Make sure I start up the camera script:
+
+```
+rm dir_for_imgs/*.png ; rm dir_for_imgs/*.txt ; python ZividCapture.py
+```
+
+and the run script.
+
+```
+python run.py --tier 1 --vf
+```
+
+Do NOT run the network loading script.
 
 On the DGX:
 
@@ -137,7 +150,7 @@ nvidia-docker run --runtime=nvidia -it -e NVIDIA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 This will start something Docker-related based on Ashwin's CUDA 10 "image"
 (i.e., "recipe") where containers are *instances* of an image.
 
-Activate the virtualenv:
+Inside that docker container, activate the virtualenv:
 
 ```
 source /data/envs/visual/bin/activate
@@ -146,7 +159,7 @@ source /data/envs/visual/bin/activate
 Run something like this (assuming GPU 5 is available, check with `nvidia-smi`):
 
 ```
-(visual) root@23db4c61657c:/data/cloth-visual-mpc# CUDA_VISIBLE_DEVICES=5 python vismpc/scripts/dvrk.py
+(visual) root@23db4c61657c:/data/cloth-visual-mpc# rm /data/dir_for_imgs/* ; CUDA_VISIBLE_DEVICES=5 python vismpc/scripts/dvrk.py
 ```
 
 It takes a few seconds to start up. Eventually, this will run continuously like
@@ -187,5 +200,19 @@ and so on!
 I modified Ryan's script so that it looks at `/data/dir_for_images/` which is
 where `/raid/for-daniel` goes.
 
+UPDATE: actually to make things simple, you can make the commands the same both ways:
+
+
+```
+scp dir_for_imgs/*56.png seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/
+```
+
+and
+
+```
+scp seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/*.txt dir_for_imgs/
+```
+
+The scripts we use should only select for the most recent samples.
 
 [1]:https://github.com/BerkeleyAutomation/dvrk_python
