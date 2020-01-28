@@ -350,8 +350,7 @@ def run(args, p, img_shape, save_path):
 if __name__ == "__main__":
     # I would just set all to reasonable defaults, or put them in the config file.
     parser= argparse.ArgumentParser()
-    parser.add_argument('--use_other_color', action='store_true')
-    #parser.add_argument('--use_color', type=int) # 1 = True
+    parser.add_argument('--vf', action='store_true')
     parser.add_argument('--tier', type=int)
     args = parser.parse_args()
     assert args.tier is not None
@@ -380,7 +379,10 @@ if __name__ == "__main__":
 
     # Determine the file name to save, for permanent storage.
     if args.use_rgbd:
-        save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+        if args.vf:
+            save_path = join('results', 'vf_tier{}_rgbd'.format(args.tier))
+        else:
+            save_path = join('results', 'tier{}_rgbd'.format(args.tier))
     else:
         raise ValueError()
     # Ignore for now, but may re-visit when we do benchmarks with earlier networks?
