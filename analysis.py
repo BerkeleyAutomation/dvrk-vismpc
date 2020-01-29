@@ -34,7 +34,10 @@ For January 2020+:
 
     The first five DAgger episodes of each tier are with the RGBD-trained
     policy w/action truncation, and used the naive 'structural similarity'
-    action correction which we should probably adjust ... now?
+    action correction which we should probably adjust ... now? UPDATE: as of
+    Jan 28, 2020, I re-did (most) of these with the newer way that we have now.
+    Look at whatever is in the 'old' directories to see which ones were updated
+    --- and the dates I ran the trajectory.
 """
 import os
 import cv2
@@ -53,6 +56,9 @@ def _criteria(x, MONTH_BEGIN=9, DAY_BEGIN=7):
 
     I started on the 6th but changed the protocol a bit afterwards.
     """
+    # As of Jan 2020 I am using all.
+    return True
+
     # Get only the pickle file name.
     x = os.path.basename(x)
 
@@ -126,8 +132,7 @@ def analyze_group(head):
         # Special case ... I think I recorded duplicate coverage.
         # Update: actually I think I got rid of this after the first case (T1,
         # episode1, DAgger) so I should change this if it poses a problem.
-        if len(data['actions']) == 9:
-            assert len(data['d_img']) == 11, len(data['d_img'])
+        if (len(data['actions']) == 9) and (len(data['d_img']) == 11):
             ss['avg'].append( np.mean(data['coverage'][1:-1]) )  # duplicate at end, so up to -1
         else:
             ss['avg'].append( np.mean(data['coverage'][1:]) )
@@ -245,11 +250,11 @@ if __name__ == "__main__":
     head = join('results', 'tier1_rgbd')
     str1, nb1 = analyze_group(head)
 
-    #print('\n*********************************************')
-    #print('ANALYZING TIER 1 VF')
-    #print('*********************************************\n')
-    #head = join('results', 'tier1_depth')
-    #str2, nb2 = analyze_group(head)
+    print('\n*********************************************')
+    print('ANALYZING TIER 1 VF')
+    print('*********************************************\n')
+    head = join('results', 'vf_tier1_rgbd')
+    str2, nb2 = analyze_group(head)
 
     print('\n*********************************************')
     print('ANALYZING TIER 2 COLOR')
@@ -257,11 +262,11 @@ if __name__ == "__main__":
     head = join('results', 'tier2_rgbd')
     str3, nb3 = analyze_group(head)
 
-    #print('\n*********************************************')
-    #print('ANALYZING TIER 2 VF')
-    #print('*********************************************\n')
-    #head = join('results', 'tier2_depth')
-    #str4, nb4 = analyze_group(head)
+    print('\n*********************************************')
+    print('ANALYZING TIER 2 VF')
+    print('*********************************************\n')
+    head = join('results', 'vf_tier2_rgbd')
+    str4, nb4 = analyze_group(head)
 
     print('\n*********************************************')
     print('ANALYZING TIER 3 COLOR')
@@ -269,19 +274,18 @@ if __name__ == "__main__":
     head = join('results', 'tier3_rgbd')
     str5, nb5 = analyze_group(head)
 
-    #print('\n*********************************************')
-    #print('ANALYZING TIER 3 VF')
-    #print('*********************************************\n')
-    #head = join('results', 'tier3_depth')
-    #str6, nb6 = analyze_group(head)
+    print('\n*********************************************')
+    print('ANALYZING TIER 3 VF')
+    print('*********************************************\n')
+    head = join('results', 'vf_tier3_rgbd')
+    str6, nb6 = analyze_group(head)
 
     print('\nNumber of trials we record:')
-    #print(nb1, nb2, nb3, nb4, nb5, nb6)
-    print(nb1, nb3, nb5)
+    print(nb1, nb2, nb3, nb4, nb5, nb6)
     print('\n\nCopy and paste this for LaTeX:\nstart, end, max, nacts')
-    print('T1 RGBD DAgger '+ str1)
-    #print('T1 Dep. '+ str2)
-    print('T2 RGBD DAgger '+ str3)
-    #print('T2 Dep. '+ str4)
-    print('T3 RGBD DAgger '+ str5)
-    #print('T3 Dep. '+ str6)
+    print('T1 IL '+ str1)
+    print('T1 VF '+ str2)
+    print('T2 IL '+ str3)
+    print('T2 VF '+ str4)
+    print('T3 IL '+ str5)
+    print('T3 VF '+ str6)
