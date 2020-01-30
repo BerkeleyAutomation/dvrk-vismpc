@@ -79,10 +79,10 @@ def action_correction(act, freq, c_img_100x100, display=True):
         # the delta magnitudes so they're smaller?
         print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x, y, _THRESHOLD))
         print('  WARNING: CODE THINKS PICK POINT IS ON THE CLOTH!')
-        on_cloth = True
+        ON_CLOTH = True
     else:
         print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-x, y, _THRESHOLD))
-        on_cloth = False
+        ON_CLOTH = False
 
     # some more threshold stuff, find the center pixel?
     # I know it has some of the boundary stuff, but part of that is unavoidable imo.
@@ -117,11 +117,14 @@ def action_correction(act, freq, c_img_100x100, display=True):
     # The old pick point was at (act[0], act[1]). Also, in the actual code, if
     # we call this many times consecutively, MULTIPLY `change_{x,y}` by `freq`.
     # To make change larger, decrease CHANGE_CONST.
-    change_x = (dir_norm[0] / CHANGE_CONST) * freq
-    change_y = (dir_norm[1] / CHANGE_CONST) * freq
-    if on_cloth:
-        change_x /= 2.0
-        change_y /= 2.0
+
+    # Update Jan 29: actually should not be moving if we are on the cloth.
+    if ON_CLOTH:
+        change_x = 0.0
+        change_y = 0.0
+    else:
+        change_x = (dir_norm[0] / CHANGE_CONST) * freq
+        change_y = (dir_norm[1] / CHANGE_CONST) * freq
     print('      change actx space: {:.2f}'.format(change_x))
     print('      change acty space: {:.2f}'.format(change_x))
     new_pick = (act[0]+change_x, act[1]+change_y)
@@ -153,7 +156,10 @@ def run(args, p, img_shape, save_path):
     stats = defaultdict(list)
     # using 15 for vismpc and to be fair, DAgger if we also used 15 ...
     MAX_EP_LENGTH = 15
-    COVERAGE_SUCCESS = 0.92
+    if args.special:
+        COVERAGE_SUCCESS = 1.50
+    else:
+        COVERAGE_SUCCESS = 0.92
     SS_THRESH = 0.95
     dumb_correction = False
     freq = 0
@@ -351,6 +357,7 @@ if __name__ == "__main__":
     # I would just set all to reasonable defaults, or put them in the config file.
     parser= argparse.ArgumentParser()
     parser.add_argument('--vf', action='store_true')
+    parser.add_argument('--special', action='store_true')
     parser.add_argument('--tier', type=int)
     args = parser.parse_args()
     assert args.tier is not None
@@ -378,13 +385,17 @@ if __name__ == "__main__":
         sys.exit()
 
     # Determine the file name to save, for permanent storage.
-    if args.use_rgbd:
-        if args.vf:
-            save_path = join('results', 'vf_tier{}_rgbd'.format(args.tier))
-        else:
-            save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+    if args.special:
+        assert args.vf
+        save_path = join('results', 'special'.format())
     else:
-        raise ValueError()
+        if args.use_rgbd:
+            if args.vf:
+                save_path = join('results', 'vf_tier{}_rgbd'.format(args.tier))
+            else:
+                save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+        else:
+            raise ValueError(args)
     # Ignore for now, but may re-visit when we do benchmarks with earlier networks?
     #if args.use_color:
     #    if args.use_other_color:

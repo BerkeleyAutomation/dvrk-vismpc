@@ -290,13 +290,11 @@ def test_action_mapping(c_img, bounding_dims=(10,90,10,90), rgb_cutoff=90, displ
     if (thresh[B-y, x] <= 0.0):
         print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
         print('  (we do not need to do any re-mapping)')
+        ON_CLOTH = True
     else:
         print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
         print('  (should map action towards the cloth, ideally)')
-    #print('  thresh[{},{}]:   {:.1f}'.format(x, y,         thresh[x,y]))
-    #print('  thresh[{},{}]:   {:.1f}'.format(x, B-y,     thresh[x,B-y]))
-    #print('  thresh[{},{}]:   {:.1f}'.format(B-x, y,     thresh[B-x,y]))
-    #print('  thresh[{},{}]:   {:.1f}'.format(B-x, B-y, thresh[B-x,B-y]))
+        ON_CLOTH = False
 
     # some more threshold stuff, find the center pixel?
     # I know it has some of the boundary stuff, but part of that is unavoidable imo.
@@ -329,12 +327,22 @@ def test_action_mapping(c_img, bounding_dims=(10,90,10,90), rgb_cutoff=90, displ
     print('      interpreted as direction we should adjust pick point')
     c_img = cv2.line(c_img, pt1=(avg_y_th,avg_x_th), pt2=pix_pick, color=cfg.BLACK, thickness=1)
 
+    # -------------------------------------------------------------------------------
     # PICK POINT THAT IS RE-MAPPED. Get it in [-1,1] then convert to pixels.
     # The old pick point was at (act[0], act[1]). Also, in the actual code, if
     # we called this many times, just multiply change_{x,y} by freq.
+    # -------------------------------------------------------------------------------
+    # UPDATE: actually no we should just see if we can keep going until we hit
+    # a non-cloth point, and if we are on the cloth, we should not be doing anything.
+    # -------------------------------------------------------------------------------
+
+    # This is how much we change each time.
     CHANGE_CONST = 5
     change_x = dir_norm[0] / CHANGE_CONST
     change_y = dir_norm[1] / CHANGE_CONST
+    if ON_CLOTH:
+        change_x = 0
+        change_y = 0
     print('      change actx space: {:.2f}'.format(change_x))
     print('      change acty space: {:.2f}'.format(change_x))
     new_pick = (act[0]+change_x, act[1]+change_y)
