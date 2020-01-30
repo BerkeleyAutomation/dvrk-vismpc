@@ -23,7 +23,7 @@ import PIL
 from PIL import (Image, ImageDraw)
 
 
-def action_correction(act, freq, c_img_100x100, display=True):
+def action_correction(act, freq, c_img_100x100, display=True, similar=False):
     """Action correction if we just barely miss the cloth.
 
     Should only be called if we trigger a structural similiarity check between
@@ -44,7 +44,8 @@ def action_correction(act, freq, c_img_100x100, display=True):
 
     To make this better we could better tune the distance to travel.
     """
-    print('\nWe are correcting for action: {}, freq {}'.format(act, freq))
+    print('\nWe are correcting for action: {}, freq {}, similar {}'.format(
+            act, freq, similar))
     assert c_img_100x100.shape == (100,100,3)
     c_img_orig = c_img_100x100.copy()
     bounding_dims = (10,90,10,90)  # copy whatever's in `utils.py`
@@ -119,17 +120,47 @@ def action_correction(act, freq, c_img_100x100, display=True):
     # To make change larger, decrease CHANGE_CONST.
 
     # Update Jan 29: actually should not be moving if we are on the cloth.
+    # This is how much we change each time.
+    CHANGE_CONST = 5
+    delta_x = dir_norm[0] / CHANGE_CONST
+    delta_y = dir_norm[1] / CHANGE_CONST
+    change_x = delta_x
+    change_y = delta_y
     if ON_CLOTH:
-        change_x = 0.0
-        change_y = 0.0
+        change_x = 0
+        change_y = 0
+        # hacky solution to handle case of when code thinks we are touching the
+        # cloth, but where it is just barely missing. Really annoying.
+        if similar:
+            change_x = delta_x
+            change_y = delta_y
     else:
-        change_x = (dir_norm[0] / CHANGE_CONST) * freq
-        change_y = (dir_norm[1] / CHANGE_CONST) * freq
-    print('      change actx space: {:.2f}'.format(change_x))
-    print('      change acty space: {:.2f}'.format(change_x))
+        # I would say we just keep going until we hit the threshold?
+        while not ON_CLOTH:
+            # Get action representation `new_pick` then expand it to the image size, giving
+            # us pixels we can draw assuming we do B-y for the y value.
+            new_pick = (act[0]+change_x, act[1]+change_y)
+            pix_new = (int(new_pick[0]*XX + XX),
+                       int(new_pick[1]*XX + XX))
+            x, y = pix_new[0], pix_new[1]
+            if not (0 <= x < B) or not (0 <= y < B):
+                ON_CLOTH = True
+                continue
+            if (thresh[B-y, x] <= 0.0):
+                print('ON the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_THRESHOLD))
+                ON_CLOTH = True
+            else:
+                print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_THRESHOLD))
+                ON_CLOTH = False
+                # keep increasing change_x and change_y
+                change_x += delta_x
+                change_y += delta_y
+
     new_pick = (act[0]+change_x, act[1]+change_y)
     pix_new = (int(new_pick[0]*XX + XX),
                int(B - (new_pick[1]*XX + XX)))
+    print('      change actx space: {:.2f}'.format(change_x))
+    print('      change acty space: {:.2f}'.format(change_x))
     print('      old pick pt: {:.2f},{:.2f}'.format(act[0], act[1]))
     print('      new pick pt: {:.2f},{:.2f}'.format(new_pick[0], new_pick[1]))
     c_img = cv2.circle(c_img, center=pix_new, radius=4, color=C.BLUE, thickness=-1)
@@ -235,6 +266,7 @@ def run(args, p, img_shape, save_path):
         # center of the cloth plane. An approximation but likely 'good enough'.
         # It does assume the net would predict a similiar action, though ...
         # ----------------------------------------------------------------------
+        similar = False
         if i > 0:
             # AH! Go to -2 because I modified code to append (c_img,d_img) above.
             prev_c = stats['c_img'][-2]
@@ -256,15 +288,19 @@ def run(args, p, img_shape, save_path):
             if diff_ss_c > SS_THRESH:
                 freq += 1
                 print('NOTE structural similiarity exceeds {}'.format(SS_THRESH))
-                if dumb_correction:
-                    action[0] = action[0] * (0.9 ** freq)
-                    action[1] = action[1] * (0.9 ** freq)
-                    print('revised action after \'dumb compression\': {}, freq {}'.format(
-                            action, freq))
-                else:
-                    action = action_correction(action, freq, c_img_100x100)
-            else:
-                freq = 0
+                similar = True
+            #    if dumb_correction:
+            #        action[0] = action[0] * (0.9 ** freq)
+            #        action[1] = action[1] * (0.9 ** freq)
+            #        print('revised action after \'dumb compression\': {}, freq {}'.format(
+            #                action, freq))
+            #    else:
+            #        action = action_correction(action, freq, c_img_100x100)
+            #else:
+            #    freq = 0
+
+        # Actually just use the above for recording statistics. Always check the action.
+        action = action_correction(action, freq, c_img_100x100, similar=similar)
 
         # ----------------------------------------------------------------------
         # STEP 4. If the output would result in a dangerous position, human
