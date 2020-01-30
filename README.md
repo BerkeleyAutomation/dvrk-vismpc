@@ -162,6 +162,9 @@ Run something like this (assuming GPU 5 is available, check with `nvidia-smi`):
 (visual) root@23db4c61657c:/data/cloth-visual-mpc# rm /data/dir_for_imgs/* ; CUDA_VISIBLE_DEVICES=5 python vismpc/scripts/dvrk.py
 ```
 
+**IF MAKING CHANGES TO THE VISMPC CODE BE SURE TO COMPILE VIA `python setup.py
+install`, EVEN IF WE ARE JUST CHANGING C.E.M. HYPERPARAMETERS.**
+
 It takes a few seconds to start up. Eventually, this will run continuously like
 my other script that works locally here (`call_network/load_net.py`).
 
