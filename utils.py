@@ -288,11 +288,11 @@ def test_action_mapping(c_img, bounding_dims=(10,90,10,90), rgb_cutoff=90, displ
     # Ah, it can be inaccurate due to boundary conditions? Not sure how to easily fix.
     x, y = int(pix_pick[0]), int(pix_pick[1])
     if (thresh[B-y, x] <= 0.0):
-        print('ON the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
+        print('ON the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_threshold))
         print('  (we do not need to do any re-mapping)')
         ON_CLOTH = True
     else:
-        print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-x,y,_threshold))
+        print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_threshold))
         print('  (should map action towards the cloth, ideally)')
         ON_CLOTH = False
 
@@ -337,19 +337,43 @@ def test_action_mapping(c_img, bounding_dims=(10,90,10,90), rgb_cutoff=90, displ
     # -------------------------------------------------------------------------------
 
     # This is how much we change each time.
-    CHANGE_CONST = 5
-    change_x = dir_norm[0] / CHANGE_CONST
-    change_y = dir_norm[1] / CHANGE_CONST
+    CHANGE_CONST = 10
+    delta_x = dir_norm[0] / CHANGE_CONST
+    delta_y = dir_norm[1] / CHANGE_CONST
+    change_x = delta_x
+    change_y = delta_y
     if ON_CLOTH:
         change_x = 0
         change_y = 0
-    print('      change actx space: {:.2f}'.format(change_x))
-    print('      change acty space: {:.2f}'.format(change_x))
+    else:
+        # I would say we just keep going until we hit the threshold?
+        while not ON_CLOTH:
+            # Get action representation `new_pick` then expand it to the image size, giving
+            # us pixels we can draw assuming we do B-y for the y value.
+            new_pick = (act[0]+change_x, act[1]+change_y)
+            pix_new = (int(new_pick[0]*XX + XX),
+                       int(new_pick[1]*XX + XX))
+            x, y = pix_new[0], pix_new[1]
+            if not (0 <= x < B) or not (0 <= y < B):
+                ON_CLOTH = True
+                continue
+            if (thresh[B-y, x] <= 0.0):
+                print('ON the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_threshold))
+                ON_CLOTH = True
+            else:
+                print('NOT on the cloth, arr[{},{}], thresh: {}'.format(B-y,x,_threshold))
+                ON_CLOTH = False
+                # keep increasing change_x and change_y
+                change_x += delta_x
+                change_y += delta_y
+
     new_pick = (act[0]+change_x, act[1]+change_y)
     pix_new = (int(new_pick[0]*XX + XX),
-               int(B - (new_pick[1]*XX + XX)))  # just do 100 - x.
+               int(B - (new_pick[1]*XX + XX)))
+    print('      change actx space: {:.2f}'.format(change_x))
+    print('      change acty space: {:.2f}'.format(change_x))
     print('      old pick pt: {}'.format((act[0],act[1])))
-    print('      new pick pt: {}'.format(new_pick))
+    print('      new pick pt: {} NEW PICK POINT IN BLUE'.format(new_pick))
     c_img = cv2.circle(c_img, center=pix_new, radius=4, color=cfg.BLUE, thickness=-1)
 
     # Display a bunch of images for debugging
@@ -603,8 +627,8 @@ if __name__ == "__main__":
         #act = [-0.90, -0.90, 0.5, 0.5] # passes
         #act = [0.90, -0.90, 0.5, 0.5] # passes
         #act = [-0.90, 0.90, 0.5, 0.5] # passes
-        #act = [0.90, 0.90, 0.5, 0.5] # passes
-        act = [0.0, 0.0, 0.5, 0.5] # passes
+        act = [0.90, 0.90, 0.5, 0.5] # passes
+        #act = [-0.0, -0.0, 0.5, 0.5] # passes
         for idx,(img,fname) in enumerate(zip(images,img_paths)):
             coverage = test_action_mapping(img, display=True, act=act)
             print('  image {} at {} has coverage {:.2f}'.format(idx, fname, coverage*100))
