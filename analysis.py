@@ -169,7 +169,7 @@ def analyze_group(head):
     #        np.mean(ss['max']),np.std(ss['max']),
     #        np.mean(ss['avg']),np.std(ss['avg']),
     #)
-    _str = '& {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} & {:.1f} +/- {:.1f} \\\\'.format(
+    _str = '& {:.1f} +/- {:.0f} & {:.1f} +/- {:.0f} & {:.1f} +/- {:.0f} & {:.1f} +/- {:.0f} \\\\'.format(
             np.mean(ss['beg']),np.std(ss['beg']),
             np.mean(ss['end']),np.std(ss['end']),
             np.mean(ss['max']),np.std(ss['max']),
