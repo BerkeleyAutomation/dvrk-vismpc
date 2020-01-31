@@ -18,11 +18,11 @@ from collections import defaultdict
 SAVE_IMAGES = False
 
 # matplotlib
-titlesize = 42
-xsize = 40
-ysize = 40
-ticksize = 36
-legendsize = 36
+titlesize = 55
+xsize = 48
+ysize = 48
+ticksize = 44
+legendsize = 44
 er_alpha = 0.25
 bar_width = 0.3
 bar_alpha = 0.9
@@ -33,21 +33,25 @@ def plot(ss_il, ss_vf):
     """We have lists of the pickle files of IL and VF."""
     nrows, ncols = 1, 2
     fig, ax = plt.subplots(nrows, ncols, squeeze=False, sharey='row',
-                           figsize=(11*ncols, 8*nrows))
+                           figsize=(10*ncols, 7*nrows))
     #gridspec_kw={'width_ratios': [1, 1.5]}) # can do if needed
 
-    ax[0,0].hist(ss_il)
-    ax[0,1].hist(ss_vf)
+    bins=np.histogram(np.hstack((ss_il,ss_vf)), bins=20)[1] #get the bin edges
 
+    ax[0,0].hist(ss_il, bins=bins, weights=np.zeros_like(ss_il)+1.0/len(ss_il), rwidth=0.9)
+    ax[0,1].hist(ss_vf, bins=bins, weights=np.zeros_like(ss_vf)+1.0/len(ss_vf), rwidth=0.9)
     ax[0,0].set_xlim([0.0, 0.6])
     ax[0,1].set_xlim([0.0, 0.6])
 
     # Bells and whistles
     ax[0,0].set_xlabel('Delta Magnitudes', fontsize=ysize)
     ax[0,1].set_xlabel('Delta Magnitudes', fontsize=ysize)
-    ax[0,0].set_ylabel('Frequency', fontsize=ysize)
+    #ax[0,0].set_ylabel('Frequency', fontsize=ysize)
     ax[0,0].set_title('Imitation Learning', fontsize=titlesize)
-    ax[0,1].set_title('Visuospatial Foresight', fontsize=titlesize)
+    ax[0,1].set_title('VisuoSpatial Foresight', fontsize=titlesize)
+    # https://stackoverflow.com/questions/9767241/
+    # setting-a-relative-frequency-in-a-matplotlib-histogram
+    ax[0,0].set_ylabel('Fraction of Actions', fontsize=ysize)
 
     for r in range(nrows):
         for c in range(ncols):
