@@ -1,44 +1,9 @@
-"""Analyze pickle files. REQUIRES PYTHON 2.7 (sorry). Call like this:
-
-`python analysis.py`
-
-with `results` file in the correct path.
-
-POTENTIALLY OUTDATED (from Fall 2019):
-
-    The only episodes which I think have issues with lengths of the lists is tier1,
-    color, episode 000, which has duplicate coverage.
-
-    The number of actions should be one less than the number of images and coverage
-    statistics.
-
-    At some point on September 6, I made the episode length 10.
-
-    Starting September 8 and beyond for the last week:
-      - Follow protocol of starting the cloth, then randomizing which of RGB or
-        depth is applied. Then we recreate the cloth as close as we can, and do the
-        other experiment.
-      - We use the de-noising that Ryan Hoque suggested.
-
-    Starting September 9, I'm using a lighter blue cloth, which should more closely
-    match what we have in simulation.
-
-    NOTE: just realized, if doing 9 actions, such as in:
-        results/tier2_color/ep_020_2019-09-13-11-52.pkl
-    for some reason it records the coverage twice. Oops! Let's correct for that.
-
-For January 2020+:
-
-    Tier 1, episode 000 has 9 actions but 11 images since I saved the last as a
-    duplicate, due to bad logic with my coverage success code.
-
-    The first five DAgger episodes of each tier are with the RGBD-trained
-    policy w/action truncation, and used the naive 'structural similarity'
-    action correction which we should probably adjust ... now? UPDATE: as of
-    Jan 28, 2020, I re-did (most) of these with the newer way that we have now.
-    Look at whatever is in the 'old' directories to see which ones were updated
-    --- and the dates I ran the trajectory.
+"""Analyze pickle files from the folding.
 """
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+plt.style.use('seaborn-darkgrid')
 import os
 import cv2
 import sys
@@ -48,7 +13,18 @@ import numpy as np
 np.set_printoptions(precision=4, linewidth=200)
 from os.path import join
 from collections import defaultdict
-SAVE_IMAGES = True
+SAVE_IMAGES = False
+
+# matplotlib
+titlesize = 55
+xsize = 48
+ysize = 48
+ticksize = 44
+legendsize = 44
+er_alpha = 0.25
+bar_width = 0.3
+bar_alpha = 0.9
+lw = 5
 
 
 def _criteria(x, MONTH_BEGIN=9, DAY_BEGIN=7):
