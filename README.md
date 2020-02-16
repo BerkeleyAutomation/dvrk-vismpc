@@ -1,3 +1,6 @@
+*Note: for the IROS 2020 submission, use the IROS branch! The master branch is
+for the RSS submission.*
+
 # Da Vinci Code for Fabrics and Visual MPC
 
 This is not for the original smoothing paper. For that, [see this code][1].
@@ -38,7 +41,10 @@ virtualenv that we use for loading TensorFlow.
 virtualenv as well that uses the system site packages, so that we can do `pip
 install scikit-learn` and get the structural similarity code ... stay tuned!**
 
-## Calibration
+*I am using this virtualenv for both the RSS and IROS submissions. When doing
+so, be careful that the `baselines-fork` version is the correct one!*
+
+## Calibration and Camera
 
 Before using the robot, we need to calibrate it to ensure that we have a
 mapping from coordinates in `[-1,1]` to coordinates w.r.t. the robot's base
@@ -46,6 +52,10 @@ frame. Put a 5x5 checkerboard on top of the foam rubber. Then go into the
 `tests/` folder and run `python test_03_checkerboard_pick_test.py` to check the
 calibration. Use the system Python (it's Python 2.7). Once it looks good, save
 the calibration file (!!) and then move on to experiments.
+
+After that, test the *camera* and *coverage* code by collecting a bunch of
+images using the camera script. Then, using the system Python 2.7, run `python
+utils.py` and see if coverage makes sense.
 
 ## Experimental Usage
 

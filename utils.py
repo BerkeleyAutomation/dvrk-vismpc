@@ -184,7 +184,7 @@ def inpaint_depth_image(d_img, ix, iy, offset):
     return d_img
 
 
-def calculate_coverage(c_img, bounding_dims=(10,91,10,91), rgb_cutoff=90, display=False):
+def calculate_coverage(c_img, bounding_dims=(12,92,10,91), rgb_cutoff=90, display=False):
     """
     Given precomputed constant preset locations that represent the corners in a
     clockwise order, it computes the percent of pixels that are above a certain
@@ -617,13 +617,13 @@ if __name__ == "__main__":
     print('num images: {}'.format(nb_imgs))
 
     # Test coverage.
-    if False:
+    if True:
         for idx,(img,fname) in enumerate(zip(images,img_paths)):
             coverage = calculate_coverage(img, display=True)
             print('  image {} at {} has coverage {:.2f}'.format(idx, fname, coverage*100))
 
     # Test action mapping. Just with `python utils.py`. Only pick point matters.
-    if True:
+    if False:
         #act = [-0.90, -0.90, 0.5, 0.5] # passes
         #act = [0.90, -0.90, 0.5, 0.5] # passes
         #act = [-0.90, 0.90, 0.5, 0.5] # passes
