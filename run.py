@@ -392,8 +392,9 @@ def run(args, p, img_shape, save_path):
 if __name__ == "__main__":
     # I would just set all to reasonable defaults, or put them in the config file.
     parser= argparse.ArgumentParser()
-    parser.add_argument('--vf', action='store_true')
-    parser.add_argument('--special', action='store_true')
+    parser.add_argument('--use_rgbd', action='store_true')
+    parser.add_argument('--use_color', action='store_true')
+    parser.add_argument('--use_depth', action='store_true')
     parser.add_argument('--tier', type=int)
     args = parser.parse_args()
     assert args.tier is not None
@@ -404,7 +405,10 @@ if __name__ == "__main__":
     # With newer code, we run the camera script in a separate file.
     # The camera script will save in the dvrk config directory. Count up index.
     #cam = camera.RGBD()
-    img_shape = (56,56,3)
+    if args.use_rgbd:
+        img_shape = (100,100,4)
+    else:
+        img_shape = (100,100,3)
 
     # Assume a clean directory where we store things FOR THIS EPISODE ONLY.
     dvrk_img_paths = U.get_sorted_imgs()
@@ -421,28 +425,20 @@ if __name__ == "__main__":
         sys.exit()
 
     # Determine the file name to save, for permanent storage.
-    if args.special:
-        assert args.vf
-        save_path = join('results', 'special'.format())
-    else:
-        if args.use_rgbd:
-            if args.vf:
-                save_path = join('results', 'vf_tier{}_rgbd'.format(args.tier))
-            else:
-                save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+    if args.use_color:
+        if args.use_other_color:
+            save_path = join('results', 'tier{}_color_yellowcloth'.format(args.tier))
         else:
-            raise ValueError(args)
-    # Ignore for now, but may re-visit when we do benchmarks with earlier networks?
-    #if args.use_color:
-    #    if args.use_other_color:
-    #        save_path = join('results', 'tier{}_color_yellowcloth'.format(args.tier))
-    #    else:
-    #        save_path = join('results', 'tier{}_color'.format(args.tier))
-    #else:
-    #    if args.use_other_color:
-    #        save_path = join('results', 'tier{}_depth_yellowcloth'.format(args.tier))
-    #    else:
-    #        save_path = join('results', 'tier{}_depth'.format(args.tier))
+            save_path = join('results', 'tier{}_color'.format(args.tier))
+    elif args.use_depth:
+        if args.use_other_color:
+            save_path = join('results', 'tier{}_depth_yellowcloth'.format(args.tier))
+        else:
+            save_path = join('results', 'tier{}_depth'.format(args.tier))
+    elif args.use_rgbd:
+        save_path = join('results', 'tier{}_rgbd'.format(args.tier))
+    else:
+        raise ValueError(args)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 

@@ -40,13 +40,16 @@ class NetLoader:
 
         When creating the actor, the TF is not actually created, for that we
         need placeholders and then to 'call' the actor.
+        obs_shape: (56,56,4) for RSS 2020 submission.
+                   (100,100,{3,4}) for IROS 2020 submission, depending on RGBD
+            vs RGB or D alone. The former uses 4 channels, the latter two use 3.
         """
         self.actor = Actor(nb_actions=4, name='actor', network='cloth_cnn', use_keras=False)
         self.net_file = net_file
 
         # Exactly same as in the imit/imit_learner code, create actor network.
-        #self.observation_shape = (100, 100, 3)
-        self.observation_shape = (56, 56, 4)
+        self.observation_shape = (100, 100, 4)
+        #self.observation_shape = (56, 56, 4)
         assert self.observation_shape[0] == self.observation_shape[1]
         shape = (None,) + self.observation_shape
         self.obs0 = tf.placeholder(tf.int32, shape=shape, name='obs0_imgs')
@@ -180,9 +183,10 @@ def get_net_results():
 
 
 if __name__ == '__main__':
+    # We will combine into 4 channels later.
+    raw_img_shape = (100,100,3)
     net_file = cfg.NET_FILE
     net_l = NetLoader(net_file)
-    raw_img_shape = (56,56,3)
 
     # Test if it is working, should set to False for actual dvrk experiments.
     DO_TEST = False
@@ -248,9 +252,9 @@ if __name__ == '__main__':
         # Note that this is one MINUS nb_curr ... that is 1-idx'd.
         time.sleep(1)  # just in case delays happen
         c_path = join(cfg.DVRK_IMG_PATH,
-                      '{}-c_img_crop_proc_56.png'.format(str(nb_curr-1).zfill(3)))
+                      '{}-c_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
         d_path = join(cfg.DVRK_IMG_PATH,
-                      '{}-d_img_crop_proc_56.png'.format(str(nb_curr-1).zfill(3)))
+                      '{}-d_img_crop_proc.png'.format(str(nb_curr-1).zfill(3)))
         dvrk_c_img = cv2.imread(c_path)
         dvrk_d_img = cv2.imread(d_path)
         assert dvrk_c_img.shape == dvrk_d_img.shape == raw_img_shape
