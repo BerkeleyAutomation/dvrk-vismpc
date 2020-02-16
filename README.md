@@ -27,22 +27,25 @@ from a reference virtualenv on davinci0:
 source ~/venv/bin/activate
 ```
 
-I did `pip freeze` and put this in a file, and then made a new Python3 virtualenv:
+I did `pip freeze` and put this in a file,
+`/home/davinci/seita/minho_requirements.txt` and then made a new Python3
+virtualenv:
 
 ```
 virtualenv venvs/py3-vismpc-dvrk  --python=python3
 ```
 
-and then did `pip install -r [filename].txt` to get all the packages updated.
-After that, running `import zivid` should work. This should be the same
-virtualenv that we use for loading TensorFlow.
+and then did `pip install -r minho_requirements.txt` to get all the packages
+updated.  After that, running `import zivid` should work. This should be the
+same virtualenv that we use for loading TensorFlow.
+
+*I am using this virtualenv for both the RSS and IROS submissions. When doing
+so, be careful that the `baselines-fork` version is the correct one!*
 
 **Update: not sure what happened but we may have to install a Python2
 virtualenv as well that uses the system site packages, so that we can do `pip
 install scikit-learn` and get the structural similarity code ... stay tuned!**
 
-*I am using this virtualenv for both the RSS and IROS submissions. When doing
-so, be careful that the `baselines-fork` version is the correct one!*
 
 ## Calibration and Camera
 

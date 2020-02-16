@@ -20,7 +20,7 @@ if __name__ == "__main__":
     column_board = 6
     cloth_height = 0.000    # unit = (m)
     data_square = U.load_mapping_table(row_board, column_board,
-                                       'mapping_2020_01_16_psm1', cloth_height)
+                                       'mapping_2020_02_16_psm1', cloth_height)
     p = dvrkClothSim()
     p.set_position_origin([0.003, 0.001, -0.060], 0, 'deg') # Daniel: home, not origin
     pose_deg = p.arm.get_current_pose(unit='deg')
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     ## # Do this just to do one action, to check if calibration is working. Make
     ## # dx,dy both zero so the robot does not move to a second spot.
     ## x = -1.0
-    ## y = -1.0
+    ## y =  0.6
     ## dx = 0.0
     ## dy = 0.0
     ## U.move_p_from_net_output(x, y, dx, dy, row_board, column_board, data_square,

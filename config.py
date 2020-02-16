@@ -30,7 +30,12 @@ DVRK_IMG_PATH = 'dir_for_imgs/'
 # CALIBRATION FILE
 # ---------------------------------------------------------------------------- #
 
-CALIB_FILE = 'tests/mapping_2020_01_16_psm1'
+# For RSS 2020 submission.
+#CALIB_FILE = 'tests/mapping_2020_01_16_psm1'
+
+# For IROS 2020 (re)submission.
+CALIB_FILE = 'tests/mapping_2020_02_16_psm1'
+
 ROW_BOARD = 6
 COL_BOARD = 6
 
