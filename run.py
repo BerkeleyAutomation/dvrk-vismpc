@@ -192,7 +192,7 @@ def run(args, p, img_shape, save_path, max_ep_len):
     else:
         COVERAGE_SUCCESS = 0.92
     SS_THRESH = 0.95
-    DUMB_CORRECTION = False
+    DUMB_CORRECTION = True
     freq = 0
 
     for i in range(MAX_EP_LENGTH):
@@ -391,6 +391,7 @@ def run(args, p, img_shape, save_path, max_ep_len):
 
 if __name__ == "__main__":
     # I would just set all to reasonable defaults, or put them in the config file.
+    # In addition to these, look at some of the parameters set in the `run` file!
     parser= argparse.ArgumentParser()
     parser.add_argument('--use_rgbd', action='store_true')
     parser.add_argument('--use_color', action='store_true')
