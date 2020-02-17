@@ -41,6 +41,7 @@ def action_correction(act, freq, c_img_100x100, display=True, similar=False):
 
     (5) Adjust the pick point based on the direction vector, and multiply by
     freq, so that we go further if needed. The deltas in x and y are the same.
+    UPDATE: wait we never use freq here...
 
     To make this better we could better tune the distance to travel.
     """
@@ -181,18 +182,17 @@ def action_correction(act, freq, c_img_100x100, display=True, similar=False):
     return new_act
 
 
-def run(args, p, img_shape, save_path):
+def run(args, p, img_shape, save_path, max_ep_len):
     """Run one episode, record statistics, etc.
     """
     stats = defaultdict(list)
-    # using 15 for vismpc and to be fair, DAgger if we also used 15 ...
-    MAX_EP_LENGTH = 15
+    MAX_EP_LENGTH = max_ep_len
     if args.special:
         COVERAGE_SUCCESS = 1.50
     else:
         COVERAGE_SUCCESS = 0.92
     SS_THRESH = 0.95
-    dumb_correction = False
+    DUMB_CORRECTION = False
     freq = 0
 
     for i in range(MAX_EP_LENGTH):
@@ -222,16 +222,17 @@ def run(args, p, img_shape, save_path):
         c_path_100x100 = join(C.DVRK_IMG_PATH,
                               '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
         c_path = join(C.DVRK_IMG_PATH,
-                      '{}-c_img_crop_proc_56.png'.format(str(i).zfill(3)))
+                      '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
         d_path = join(C.DVRK_IMG_PATH,
-                      '{}-d_img_crop_proc_56.png'.format(str(i).zfill(3)))
+                      '{}-d_img_crop_proc.png'.format(str(i).zfill(3)))
         c_img_100x100 = cv2.imread(c_path_100x100)
         coverage = U.calculate_coverage(c_img_100x100)  # tuned for 100x100
         c_img = cv2.imread(c_path)
         d_img = cv2.imread(d_path)
         U.single_means(c_img, depth=False)
         U.single_means(d_img, depth=True)
-        assert c_img.shape == d_img.shape == img_shape
+        assert c_img.shape == d_img.shape == img_shape, \
+                '{} {} {}'.format(c_img.shape, d_img.shape, img_shape)
         assert args.use_rgbd
         # img = np.dstack( (c_img, d_img[:,:,0]) )  # we don't call net code here
 
@@ -289,18 +290,17 @@ def run(args, p, img_shape, save_path):
                 freq += 1
                 print('NOTE structural similiarity exceeds {}'.format(SS_THRESH))
                 similar = True
-            #    if dumb_correction:
-            #        action[0] = action[0] * (0.9 ** freq)
-            #        action[1] = action[1] * (0.9 ** freq)
-            #        print('revised action after \'dumb compression\': {}, freq {}'.format(
-            #                action, freq))
-            #    else:
-            #        action = action_correction(action, freq, c_img_100x100)
-            #else:
-            #    freq = 0
+                if DUMB_CORRECTION:
+                    action[0] = action[0] * (0.9 ** freq)
+                    action[1] = action[1] * (0.9 ** freq)
+                    print('revised action after \'dumb compression\': {}, freq {}'.format(
+                            action, freq))
+            else:
+                freq = 0
 
         # Actually just use the above for recording statistics. Always check the action.
-        action = action_correction(action, freq, c_img_100x100, similar=similar)
+        if not DUMB_CORRECTION:
+            action = action_correction(action, freq, c_img_100x100, similar=similar)
 
         # ----------------------------------------------------------------------
         # STEP 4. If the output would result in a dangerous position, human
@@ -396,6 +396,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_color', action='store_true')
     parser.add_argument('--use_depth', action='store_true')
     parser.add_argument('--special', action='store_true', help='only true for FOLDING')
+    parser.add_argument('--max_ep_len', type=int, default=10)
     parser.add_argument('--tier', type=int)
     args = parser.parse_args()
     assert args.tier is not None
@@ -405,11 +406,9 @@ if __name__ == "__main__":
 
     # With newer code, we run the camera script in a separate file.
     # The camera script will save in the dvrk config directory. Count up index.
-    #cam = camera.RGBD()
-    if args.use_rgbd:
-        img_shape = (100,100,4)
-    else:
-        img_shape = (100,100,3)
+    # Note: this is meant to be for c_img and d_img, NOT the stacked 4-D img.
+    # So don't worry if we are using RGBD, this is not the thing that 'enforces' it.
+    img_shape = (100,100,3)
 
     # Assume a clean directory where we store things FOR THIS EPISODE ONLY.
     dvrk_img_paths = U.get_sorted_imgs()
@@ -454,4 +453,4 @@ if __name__ == "__main__":
     p.set_position_origin([0.005, 0.033, -0.060], 0, 'deg')
 
     # Run one episode.
-    stats = run(args, p, img_shape=img_shape, save_path=save_path)
+    stats = run(args, p, img_shape=img_shape, save_path=save_path, max_ep_len=args.max_ep_len)
