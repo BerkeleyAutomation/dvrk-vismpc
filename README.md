@@ -15,10 +15,9 @@ Use the following core API:
 
 We're using davinci-arm machine (formerly named davinci0).
 
-We use a mix of the system Python 2.7 on there, and a Python 3.5 virtual env.
-Unlike in the original smoothing paper (from fall 2019) the camera code has
-been updated to use Python 3. However, the neural network code (as before)
-still requires Python 3.
+We use a mix of the "system Python 2.7" on the da vinci machine, and a Python
+3.5 virtual env.  Unlike in the original smoothing paper (from fall 2019) the
+camera code has been updated to use Python 3.
 
 To install, first clone this repository. Then make a new Python 3.5 virtualenv
 from a reference virtualenv on davinci0:
@@ -42,10 +41,11 @@ same virtualenv that we use for loading TensorFlow.
 *I am using this virtualenv for both the RSS and IROS submissions. When doing
 so, be careful that the `baselines-fork` version is the correct one!*
 
-**Update: not sure what happened but we may have to install a Python2
-virtualenv as well that uses the system site packages, so that we can do `pip
-install scikit-learn` and get the structural similarity code ... stay tuned!**
-
+**The last step**: unfortunately using the system python *almost* works but
+fails because we don't have `scikit-learn` installed. To rectify that, make a
+new Python 2.7 virtualenv, this time with `--system-site-packages`. Then do
+`pip install scikit-learn`. Use that Python 2.7 virtualenv for running `python
+run.py` commands.
 
 ## Calibration and Camera
 
@@ -89,9 +89,9 @@ at this TAB. Then that will take a picture, and save images indexed by a
 leading number. The neural net code will detect that number and load a specific
 file w/that index.
 
-4. Finally, run `python run.py --tier X` for experiments, using the system
-Python. This requires some keyboard strokes. *The code runs one episode* and
-then terminates.  Repeat for more episodes.
+4. Finally, *in the Python 2 virtualenv with scikit-learn*, run `python run.py
+--tier X [other_args]` for experiments. This requires some keyboard strokes.
+*The code runs one episode* and then terminates.  Repeat for more episodes.
 
 ## Tips
 

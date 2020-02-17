@@ -395,6 +395,7 @@ if __name__ == "__main__":
     parser.add_argument('--use_rgbd', action='store_true')
     parser.add_argument('--use_color', action='store_true')
     parser.add_argument('--use_depth', action='store_true')
+    parser.add_argument('--special', action='store_true', help='only true for FOLDING')
     parser.add_argument('--tier', type=int)
     args = parser.parse_args()
     assert args.tier is not None

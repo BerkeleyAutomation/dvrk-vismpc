@@ -17,7 +17,8 @@ sys.path.append('call_network')
 import PIL
 from PIL import (Image, ImageDraw)
 # Annoying, comment this out if we are doing calibration.
-#import load_config as cfg
+# But leave on by default when doing `python run.py`.
+import load_config as cfg
 
 # Useful constants.
 ESC_KEYS = [27, 1048603]
