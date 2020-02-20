@@ -42,7 +42,7 @@ POL_07 = 'openai-2020-02-11-15-52-56-391653_tier1_rgbd_50k/checkpoints/00249'
 POL_08 = 'openai-2020-02-12-14-11-03-092908_tier2_rgbd_50k/checkpoints/00249'
 POL_09 = 'openai-2020-02-15-19-37-59-883528_tier3_rgbd_50k/checkpoints/00249'
 
-WHICH_POLICY = POL_07  # ADJUST!!
+WHICH_POLICY = POL_08  # ADJUST!!
 NET_FILE = join(HEAD, WHICH_POLICY)
 
 # RSS 2020.

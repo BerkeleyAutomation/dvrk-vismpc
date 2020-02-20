@@ -359,9 +359,9 @@ def run(args, p, img_shape, save_path, max_ep_len):
         c_path_100x100 = join(C.DVRK_IMG_PATH,
                               '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
         c_path = join(C.DVRK_IMG_PATH,
-                      '{}-c_img_crop_proc_56.png'.format(str(i).zfill(3)))
+                      '{}-c_img_crop_proc.png'.format(str(i).zfill(3)))
         d_path = join(C.DVRK_IMG_PATH,
-                      '{}-d_img_crop_proc_56.png'.format(str(i).zfill(3)))
+                      '{}-d_img_crop_proc.png'.format(str(i).zfill(3)))
         c_img_100x100 = cv2.imread(c_path_100x100)
         coverage = U.calculate_coverage(c_img_100x100)  # tuned for 100x100
         c_img = cv2.imread(c_path)

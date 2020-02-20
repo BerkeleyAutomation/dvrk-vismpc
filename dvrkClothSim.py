@@ -28,9 +28,9 @@ class dvrkClothSim(threading.Thread):
         self.rot_pick = [0.0, 0.0, 0.0]   #   ZYX Euler angle in (rad)
         # self.pick_depth = -0.12
         #self.pickup_height = -0.115      # Minho default value.
-        self.pickup_height = -0.141       # Decrease this to reduce vertical movement
-        self.jaw_opening = 50*3.141592/180.0
-        self.jaw_closing = -5*3.141592/180.0
+        self.pickup_height = -0.135       # Increasing height means gripper picks at higher ponit
+        self.jaw_opening =  60 * (3.141592/180.0)
+        self.jaw_closing = -10 * (3.141592/180.0)
 
     """
     Motion Creating function for cloth simulation

@@ -185,7 +185,7 @@ def inpaint_depth_image(d_img, ix, iy, offset):
     return d_img
 
 
-def calculate_coverage(c_img, bounding_dims=(12,92,10,91), rgb_cutoff=90, display=False):
+def calculate_coverage(c_img, bounding_dims=(12,92,11,91), rgb_cutoff=90, display=False):
     """
     Given precomputed constant preset locations that represent the corners in a
     clockwise order, it computes the percent of pixels that are above a certain
