@@ -291,8 +291,8 @@ def run(args, p, img_shape, save_path, max_ep_len):
                 print('NOTE structural similiarity exceeds {}'.format(SS_THRESH))
                 similar = True
                 if DUMB_CORRECTION:
-                    action[0] = action[0] * (0.9 ** freq)
-                    action[1] = action[1] * (0.9 ** freq)
+                    action[0] = action[0] * (0.85 ** freq)
+                    action[1] = action[1] * (0.85 ** freq)
                     print('revised action after \'dumb compression\': {}, freq {}'.format(
                             action, freq))
             else:
