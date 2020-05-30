@@ -1,5 +1,30 @@
 # Da Vinci Code for Fabrics and Visual MPC
 
+*Update May 2020*: this is the code we used for the physical fabrics
+experiments with the dVRK. The master branch has the code for
+our RSS 2020 paper "VisuoSpatial Foresight (VSF) for Multi-Step, Multi-Task
+Fabric Manipulation":
+
+```
+@inproceedings{fabric_vsf_2020,
+    author = {Ryan Hoque and Daniel Seita and Ashwin Balakrishna and Aditya Ganapathi and Ajay Tanwani and Nawid Jamali and Katsu Yamane and Soshi Iba and Ken Goldberg},
+    title = {{VisuoSpatial Foresight for Multi-Step, Multi-Task Fabric Manipulation}},
+    booktitle = {Robotics: Science and Systems (RSS)},
+    Year = {2020}
+}
+```
+
+The paper is [available on arXiv][2] and we have additional information on the
+[project website][3], along with [code for the simulator and training video
+prediction models][4].
+
+*Disclaimer*: some parts of the code might not be documented to the best of our
+ability. If you have questions on how to use the code, please contact Daniel
+Seita (`seita@berkeley.edu`) with details on what you want to do, and I shall
+do my best to help you out.
+
+<hr>
+
 This is not for the original smoothing paper. For that, [see this code][1].
 
 Use the following core API:
@@ -198,12 +223,9 @@ then after MPC:
 scp seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/*_002.txt dir_for_imgs/
 ```
 
-and so on!
-
-I modified Ryan's script so that it looks at `/data/dir_for_images/` which is
-where `/raid/for-daniel` goes.
-
-UPDATE: actually to make things simple, you can make the commands the same both ways:
+and so on! I modified Ryan's script so that it looks at `/data/dir_for_images/`
+which is where `/raid/for-daniel` goes. Well, actually to make things simple,
+you can make the commands the same both ways:
 
 
 ```
@@ -219,3 +241,6 @@ scp seita@jensen.ist.berkeley.edu:/raid/for-daniel/dir_for_imgs/*.txt dir_for_im
 The scripts we use should only select for the most recent samples.
 
 [1]:https://github.com/BerkeleyAutomation/dvrk_python
+[2]:https://arxiv.org/abs/2003.09044
+[3]:https://sites.google.com/view/fabric-vsf
+[4]:https://github.com/ryanhoque/fabric-vsf
