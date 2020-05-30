@@ -1,4 +1,4 @@
-# Da Vinci Code for Fabrics and Visual MPC
+# Da Vinci Research Kit (dVRK) Code for Fabrics and Visual MPC
 
 *Update May 2020*: this is the code we used for the physical fabrics
 experiments with the dVRK. The master branch has the code for
@@ -24,6 +24,8 @@ Seita (`seita@berkeley.edu`) with details on what you want to do, and I shall
 do my best to help you out.
 
 <hr>
+
+# Original README
 
 This is not for the original smoothing paper. For that, [see this code][1].
 
